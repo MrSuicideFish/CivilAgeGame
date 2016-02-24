@@ -1,4 +1,5 @@
 ﻿using UnityEngine;
+using UnityEngine.UI;
 using System.Collections;
 
 public class CameraController : MonoBehaviour
@@ -7,6 +8,9 @@ public class CameraController : MonoBehaviour
     /// Singleton
     /// </summary>
     public static CameraController CurrentCamera;
+
+    //Helpers
+    private RectTransform SelectionRect;
 
     //Flags
     public bool LockEnabled { get; private set; }
@@ -30,6 +34,9 @@ public class CameraController : MonoBehaviour
         //Assign singleton
         CurrentCamera = this;
 
+        SelectionRect = GameObject.FindGameObjectWithTag( "SelectionRect" ).GetComponent<RectTransform>( );
+        SelectionRect.gameObject.SetActive( false );
+
         //Load in the player's settings
         CameraMoveSpeed = 10;//PlayerPrefs.GetFloat( "CameraMovementSpeed", 10 );
         CameraRotationSpeed = 10;//PlayerPrefs.GetFloat( "CameraMovementSpeed", 10 );
@@ -46,8 +53,14 @@ public class CameraController : MonoBehaviour
 
     private Vector3 DragStartPosition = Vector3.zero;
     private Vector3 DragPosition = Vector3.zero;
+    private Canvas SessionCanvas;
     void Update( )
     {
+        if ( !SessionCanvas )
+        {
+            SessionCanvas = GameObject.FindGameObjectWithTag( "SessionCanvas" ).GetComponent<Canvas>( );
+        }
+
         if ( !LockEnabled )
         {
             //Process Movement
@@ -69,7 +82,35 @@ public class CameraController : MonoBehaviour
             }
 
             //Mouse dragging stuff - Selection
+            if ( Input.GetMouseButtonDown( 0 ) )
+            {
+                //record start position
+                var _targetPos = new Vector2( Input.mousePosition.x, Input.mousePosition.y - Screen.height ) * SessionCanvas.scaleFactor;
+                DragStartPosition = _targetPos;
 
+                //Enable selection rect
+                SelectionRect.gameObject.SetActive( true );
+            }
+
+            //do drag select
+            if ( Input.GetMouseButton( 0 ) )
+            {
+                //Record drag position
+                var _targetPos = new Vector2( Input.mousePosition.x, Input.mousePosition.y - Screen.height ) * SessionCanvas.scaleFactor;
+                DragPosition = _targetPos;
+
+                //Calculate selecton rect
+                SelectionRect.anchoredPosition = new Vector2( DragStartPosition.x, DragStartPosition.y ) * SessionCanvas.scaleFactor * 2.45f;
+                SelectionRect.SetSizeWithCurrentAnchors( RectTransform.Axis.Horizontal, -(DragStartPosition.x - DragPosition.x) * SessionCanvas.scaleFactor * 2.45f );
+                SelectionRect.SetSizeWithCurrentAnchors( RectTransform.Axis.Vertical, ( DragStartPosition.y - DragPosition.y ) * SessionCanvas.scaleFactor * 2.45f );
+            }
+
+            //End drag select
+            if ( Input.GetMouseButtonUp( 0 ) )
+            {
+                //Disable selection rect
+                SelectionRect.gameObject.SetActive( false );
+            }
 
             //Mouse dragging stuff - Rotation
             if ( Input.GetMouseButtonDown( 2 ) )
