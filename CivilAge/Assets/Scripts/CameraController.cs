@@ -20,7 +20,7 @@ public class CameraController : MonoBehaviour
                 {
                     GameObject newRect = ( GameObject )Resources.Load( "SelectionRect" );
                     selectionRect = GameObject.Instantiate( newRect ).GetComponent<RectTransform>( );
-                    selectionRect.SetParent( SessionCanvas.transform, false );
+                    selectionRect.SetParent( SessionGameManager.SessionCanvas.transform, false );
                 }
                 else
                 {
@@ -29,30 +29,6 @@ public class CameraController : MonoBehaviour
             }
 
             return selectionRect;
-        }
-    }
-
-    private Canvas sessionCanvas;
-    private Canvas SessionCanvas
-    {
-        get
-        {
-            if(sessionCanvas == null )
-            {
-                var canvasObj = GameObject.FindGameObjectWithTag( "SessionCanvas" );
-                if( !canvasObj )
-                {
-                    GameObject newCanvas = ( GameObject )Resources.Load( "SessionCanvas" );
-                    sessionCanvas = GameObject.Instantiate( newCanvas ).GetComponent<Canvas>( );
-                }
-                else
-                {
-                    sessionCanvas = canvasObj.GetComponent<Canvas>( );
-                }
-            }
-
-
-            return sessionCanvas;
         }
     }
 
@@ -121,45 +97,6 @@ public class CameraController : MonoBehaviour
                 }
             }
 
-            //Mouse dragging stuff - Selection
-            if ( Input.GetMouseButtonDown( 0 ) )
-            {
-                //record start position
-                var _targetPos = new Vector2( Input.mousePosition.x, Input.mousePosition.y - Screen.height ) * SessionCanvas.scaleFactor;
-                DragStartPosition = _targetPos;
-
-                //Enable selection rect
-                SelectionRect.gameObject.SetActive( true );
-            }
-
-            //do drag select
-            if ( Input.GetMouseButton( 0 ) )
-            {
-                //Record drag position
-                var _targetPos = new Vector2( Input.mousePosition.x, Input.mousePosition.y - Screen.height ) * SessionCanvas.scaleFactor;
-                DragPosition = _targetPos;
-
-                //Calculate selecton rect
-                var _newWidth = -( DragStartPosition.x - DragPosition.x ) * SessionCanvas.scaleFactor * 2.45f;
-                var _newHeight = ( DragStartPosition.y - DragPosition.y ) * SessionCanvas.scaleFactor * 2.45f;
-
-                var xFlipped = _newWidth < 0;
-                var yFlipped = _newHeight < 0;
-
-                SelectionRect.localScale = new Vector3( xFlipped ? -1: 1, yFlipped ? -1 : 1, 1 );
-
-                SelectionRect.anchoredPosition = new Vector2( DragStartPosition.x, DragStartPosition.y ) * SessionCanvas.scaleFactor * 2.45f;
-                SelectionRect.SetSizeWithCurrentAnchors( RectTransform.Axis.Horizontal, Mathf.Abs(_newWidth) );
-                SelectionRect.SetSizeWithCurrentAnchors( RectTransform.Axis.Vertical, Mathf.Abs( _newHeight ) );
-            }
-
-            //End drag select
-            if ( Input.GetMouseButtonUp( 0 ) )
-            {
-                //Disable selection rect
-                SelectionRect.gameObject.SetActive( false );
-            }
-
             //Mouse dragging stuff - Rotation
             if ( Input.GetMouseButtonDown( 2 ) )
             {
@@ -196,12 +133,7 @@ public class CameraController : MonoBehaviour
         transform.position = Vector3.Lerp( transform.position, newPos, 0.9f );
         transform.rotation = Quaternion.LookRotation( _viewtargetPos - transform.position );
     }
-
-    void FixedUpdate( )
-    {
-
-    }
-
+    
     public static void ToggleLock(bool enabled)
     {
         CurrentCamera.LockEnabled = enabled;
