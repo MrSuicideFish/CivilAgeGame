@@ -58,8 +58,8 @@ public class CameraController : MonoBehaviour
         SelectionRect.gameObject.SetActive( false );
 
         //Load in the player's settings
-        CameraMoveSpeed = 10;//PlayerPrefs.GetFloat( "CameraMovementSpeed", 10 );
-        CameraRotationSpeed = 10;//PlayerPrefs.GetFloat( "CameraMovementSpeed", 10 );
+        CameraMoveSpeed = 0.4f;//PlayerPrefs.GetFloat( "CameraMovementSpeed", 10 );
+        CameraRotationSpeed = 0.5f;//PlayerPrefs.GetFloat( "CameraMovementSpeed", 10 );
 
         //Zoom
         MinZoomDistance = 0;
@@ -73,69 +73,58 @@ public class CameraController : MonoBehaviour
 
     private Vector3 DragStartPosition = Vector3.zero;
     private Vector3 DragPosition = Vector3.zero;
+    private float TargetZoomDistance = 0;
     void Update( )
     {
         if ( !LockEnabled )
         {
-            var _shiftModifier = Input.GetKey( KeyCode.LeftShift ) ? 2 : 1;
+            //Process camera positioning
+            Vector3 _viewtargetPos = ViewTarget == null ?
+                        TargetLocation :
+                        ViewTarget.position;
 
-            //Process Movement
-            var _moveDirection  = Vector3.zero;
-            _moveDirection.x    = Input.GetAxis( "Horizontal" ) * ( CameraMoveSpeed * Time.deltaTime );
-            _moveDirection.z    = Input.GetAxis( "Vertical" ) * ( CameraMoveSpeed * Time.deltaTime );
+            //Process Zoom
+            TargetZoomDistance = Mathf.Lerp( TargetZoomDistance, ZoomDistance, 0.1f );
 
-            //Mouse wheel scroll
-            var _scrollValue = -Input.GetAxis( "Mouse ScrollWheel" ) * CameraZoomSpeed;
+            //Process Orbit
+            Vector3 newPos = new Vector3
+            (
+                _viewtargetPos.x + TargetZoomDistance * Mathf.Cos( RotationAngle + Mathf.PI / 180 ),
+                _viewtargetPos.y + TargetZoomDistance,
+                _viewtargetPos.z + TargetZoomDistance * Mathf.Sin( RotationAngle + Mathf.PI / 180 )
+            );
 
-            if ( _scrollValue != 0 )
-            {
-                //zoom camera
-                var _newZoom = ZoomDistance + _scrollValue;
-                if( _newZoom > MinZoomDistance && _newZoom < MaxZoomDistance )
-                {
-                    ZoomDistance = _newZoom;
-                }
-            }
-
-            //Mouse dragging stuff - Rotation
-            if ( Input.GetMouseButtonDown( 2 ) )
-            {
-                DragStartPosition = Input.mousePosition;
-            }
-
-            //process drag
-            if ( Input.GetMouseButton( 2 ) )
-            {
-                DragPosition = Input.mousePosition;
-                var diff = ( DragPosition.x - DragStartPosition.x ) / Screen.width;
-                RotationAngle += diff * CameraRotationSpeed * Time.fixedDeltaTime;
-            }
-
-            //Transform move direction and increment location
-            _moveDirection = transform.TransformDirection( _moveDirection );
-            TargetLocation.x += _moveDirection.x * _shiftModifier;
-            TargetLocation.z += _moveDirection.z * _shiftModifier;
+            //Set final position
+            transform.position = Vector3.Lerp( transform.position, newPos, 0.9f );
+            transform.rotation = Quaternion.LookRotation( _viewtargetPos - transform.position );
         }
-
-        //Process camera positioning
-        Vector3 _viewtargetPos = ViewTarget == null ?
-                    TargetLocation :
-                    ViewTarget.position;
-
-        //Process Orbit
-        Vector3 newPos = new Vector3
-        (
-            _viewtargetPos.x + ZoomDistance * Mathf.Cos( RotationAngle + Mathf.PI / 180 ),
-            _viewtargetPos.y + ZoomDistance,
-            _viewtargetPos.z + ZoomDistance * Mathf.Sin( RotationAngle + Mathf.PI / 180 )
-        );
-
-        transform.position = Vector3.Lerp( transform.position, newPos, 0.9f );
-        transform.rotation = Quaternion.LookRotation( _viewtargetPos - transform.position );
     }
     
     public static void ToggleLock(bool enabled)
     {
         CurrentCamera.LockEnabled = enabled;
+    }
+
+    public void RotateCamera( float amount )
+    {
+        CurrentCamera.RotationAngle += amount * CameraRotationSpeed;
+    }
+
+    public void ZoomCamera(float amount )
+    {
+        var _newZoom = CurrentCamera.ZoomDistance + ( amount * CameraZoomSpeed );
+        if ( _newZoom > MinZoomDistance && _newZoom < MaxZoomDistance )
+        {
+            CurrentCamera.ZoomDistance = _newZoom;
+        }
+    }
+
+    public void MoveCamera(Vector3 direction, float speedModifier = 1.0f )
+    {
+        //Transform move direction and increment location
+        direction = transform.TransformDirection( direction );
+
+        TargetLocation.x += direction.x * CameraMoveSpeed * speedModifier;
+        TargetLocation.z += direction.z * CameraMoveSpeed * speedModifier;
     }
 }

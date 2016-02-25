@@ -5,10 +5,9 @@ public class PlayerInputController : MonoBehaviour
 {
     private enum MouseDragMode
     {
-        NONE,
-        DRAG_SELECT,
-        DRAG_CAMERA_ROTATE,
-        DRAG_CAMERA_PAN
+        NONE                = -1,
+        DRAG_SELECT         = 0,
+        DRAG_CAMERA_ROTATE  = 1,
     }
 
     private MouseDragMode DragMode = MouseDragMode.NONE;
@@ -18,37 +17,74 @@ public class PlayerInputController : MonoBehaviour
 
     void Update( )
     {
-        //Mouse - Selection
-        if ( Input.GetMouseButtonDown( 0 ) )
+        //////////////////////
+        // Mouse Drag
+        /////////////////////
+
+        // - Selection
+        if ( Input.GetMouseButtonDown( ( int )MouseDragMode.DRAG_SELECT ) )
             ToggleMouseDragMode( MouseDragMode.DRAG_SELECT );
 
-        if ( Input.GetMouseButtonUp( 0 ) )
+        if ( Input.GetMouseButtonUp( (int)MouseDragMode.DRAG_SELECT) )
             ToggleMouseDragMode( MouseDragMode.NONE );
 
-        //Mouse - Camera Rotate
-        if ( Input.GetMouseButtonDown( 1 ) )
+        // - Camera Rotate
+        if ( Input.GetMouseButtonDown( ( int )MouseDragMode.DRAG_CAMERA_ROTATE ) )
             ToggleMouseDragMode( MouseDragMode.DRAG_CAMERA_ROTATE );
 
-        if ( Input.GetMouseButtonUp( 1 ) )
+        if ( Input.GetMouseButtonUp( ( int )MouseDragMode.DRAG_CAMERA_ROTATE ) )
             ToggleMouseDragMode( MouseDragMode.NONE );
 
-        //Mouse - Camera Pan
-        if ( Input.GetMouseButtonDown( 2 ) )
-            ToggleMouseDragMode( MouseDragMode.DRAG_CAMERA_PAN );
+        //Update drag position
+        if (DragMode != MouseDragMode.NONE )
+            DragPosition = new Vector2( Input.mousePosition.x, Screen.height - Input.mousePosition.y );
 
-        if ( Input.GetMouseButtonUp( 2 ) )
-            ToggleMouseDragMode( MouseDragMode.NONE );
-
-        if(DragMode != MouseDragMode.NONE )
+        ///////////////////////
+        // Other mouse controls
+        ///////////////////////
+        switch ( DragMode )
         {
-            DragPosition = new Vector2( Input.mousePosition.x, Screen.height - Input.mousePosition.y  );
+            case MouseDragMode.DRAG_SELECT:
+                break;
+
+            case MouseDragMode.DRAG_CAMERA_ROTATE:
+
+                var diff = ( DragPosition.x - DragStartPosition.x ) / Screen.width;
+                CameraController.CurrentCamera.RotateCamera( diff );
+                break;
+
+            default:
+                break;
         }
+
+        //Mouse wheel scroll
+        var _scrollValue = -Input.GetAxis( "Mouse ScrollWheel" );
+        if ( _scrollValue != 0 )
+        {
+            CameraController.CurrentCamera.ZoomCamera( _scrollValue );
+        }
+
+        ///////////////////////
+        // Process Move
+        ///////////////////////
+        var moveDir = Vector3.zero;
+        moveDir.x = Input.GetAxis( "Horizontal" );
+        moveDir.z = Input.GetAxis( "Vertical" );
+
+        if( moveDir != Vector3.zero)
+            CameraController.CurrentCamera.MoveCamera(moveDir, Input.GetKey(KeyCode.LeftShift) ? 2 : 1);
     }
 
     void ToggleMouseDragMode( MouseDragMode newMode )
     {
         switch ( newMode )
         {
+            case MouseDragMode.DRAG_SELECT:
+                break;
+
+            case MouseDragMode.DRAG_CAMERA_ROTATE:
+                break;
+
             default:
                 break;
         }
