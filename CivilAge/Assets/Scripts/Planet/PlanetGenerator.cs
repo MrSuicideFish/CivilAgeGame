@@ -13,7 +13,7 @@ public class PlanetGenerator : MonoBehaviour {
         {
             GameObject planet = new GameObject("planet" + i);
             IcoSphere.Create(planet);
-            for(int i = 0; i < planet)
+            //for(int i = 0; i < planet)
         }
     }
 	

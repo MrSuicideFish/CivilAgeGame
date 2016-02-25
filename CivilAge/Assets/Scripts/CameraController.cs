@@ -4,13 +4,57 @@ using System.Collections;
 
 public class CameraController : MonoBehaviour
 {
-    /// <summary>
-    /// Singleton
-    /// </summary>
+    //Singleton
     public static CameraController CurrentCamera;
 
-    //Helpers
-    private RectTransform SelectionRect;
+    private RectTransform selectionRect;
+    private RectTransform SelectionRect
+    {
+        get
+        {
+            if ( selectionRect == null )
+            {
+                //initialize selection rectangle
+                var rectObj = GameObject.FindGameObjectWithTag( "SelectionRect" );
+                if ( rectObj == null )
+                {
+                    GameObject newRect = ( GameObject )Resources.Load( "SelectionRect" );
+                    selectionRect = GameObject.Instantiate( newRect ).GetComponent<RectTransform>( );
+                    selectionRect.SetParent( SessionCanvas.transform, false );
+                }
+                else
+                {
+                    selectionRect = rectObj.GetComponent<RectTransform>( );
+                }
+            }
+
+            return selectionRect;
+        }
+    }
+
+    private Canvas sessionCanvas;
+    private Canvas SessionCanvas
+    {
+        get
+        {
+            if(sessionCanvas == null )
+            {
+                var canvasObj = GameObject.FindGameObjectWithTag( "SessionCanvas" );
+                if( !canvasObj )
+                {
+                    GameObject newCanvas = ( GameObject )Resources.Load( "SessionCanvas" );
+                    sessionCanvas = GameObject.Instantiate( newCanvas ).GetComponent<Canvas>( );
+                }
+                else
+                {
+                    sessionCanvas = canvasObj.GetComponent<Canvas>( );
+                }
+            }
+
+
+            return sessionCanvas;
+        }
+    }
 
     //Flags
     public bool LockEnabled { get; private set; }
@@ -31,10 +75,10 @@ public class CameraController : MonoBehaviour
 
     void Awake( )
     {
-        //Assign singleton
+        //Camera
         CurrentCamera = this;
 
-        SelectionRect = GameObject.FindGameObjectWithTag( "SelectionRect" ).GetComponent<RectTransform>( );
+        //Disable selection rect by default
         SelectionRect.gameObject.SetActive( false );
 
         //Load in the player's settings
@@ -53,16 +97,12 @@ public class CameraController : MonoBehaviour
 
     private Vector3 DragStartPosition = Vector3.zero;
     private Vector3 DragPosition = Vector3.zero;
-    private Canvas SessionCanvas;
     void Update( )
     {
-        if ( !SessionCanvas )
-        {
-            SessionCanvas = GameObject.FindGameObjectWithTag( "SessionCanvas" ).GetComponent<Canvas>( );
-        }
-
         if ( !LockEnabled )
         {
+            var _shiftModifier = Input.GetKey( KeyCode.LeftShift ) ? 2 : 1;
+
             //Process Movement
             var _moveDirection  = Vector3.zero;
             _moveDirection.x    = Input.GetAxis( "Horizontal" ) * ( CameraMoveSpeed * Time.deltaTime );
@@ -100,9 +140,17 @@ public class CameraController : MonoBehaviour
                 DragPosition = _targetPos;
 
                 //Calculate selecton rect
+                var _newWidth = -( DragStartPosition.x - DragPosition.x ) * SessionCanvas.scaleFactor * 2.45f;
+                var _newHeight = ( DragStartPosition.y - DragPosition.y ) * SessionCanvas.scaleFactor * 2.45f;
+
+                var xFlipped = _newWidth < 0;
+                var yFlipped = _newHeight < 0;
+
+                SelectionRect.localScale = new Vector3( xFlipped ? -1: 1, yFlipped ? -1 : 1, 1 );
+
                 SelectionRect.anchoredPosition = new Vector2( DragStartPosition.x, DragStartPosition.y ) * SessionCanvas.scaleFactor * 2.45f;
-                SelectionRect.SetSizeWithCurrentAnchors( RectTransform.Axis.Horizontal, -(DragStartPosition.x - DragPosition.x) * SessionCanvas.scaleFactor * 2.45f );
-                SelectionRect.SetSizeWithCurrentAnchors( RectTransform.Axis.Vertical, ( DragStartPosition.y - DragPosition.y ) * SessionCanvas.scaleFactor * 2.45f );
+                SelectionRect.SetSizeWithCurrentAnchors( RectTransform.Axis.Horizontal, Mathf.Abs(_newWidth) );
+                SelectionRect.SetSizeWithCurrentAnchors( RectTransform.Axis.Vertical, Mathf.Abs( _newHeight ) );
             }
 
             //End drag select
@@ -118,18 +166,18 @@ public class CameraController : MonoBehaviour
                 DragStartPosition = Input.mousePosition;
             }
 
+            //process drag
             if ( Input.GetMouseButton( 2 ) )
             {
                 DragPosition = Input.mousePosition;
-
-                //process drag
-                RotationAngle += ( DragPosition.x - DragStartPosition.x ) * 0.0006f;
+                var diff = ( DragPosition.x - DragStartPosition.x ) / Screen.width;
+                RotationAngle += diff * CameraRotationSpeed * Time.fixedDeltaTime;
             }
 
             //Transform move direction and increment location
             _moveDirection = transform.TransformDirection( _moveDirection );
-            TargetLocation.x += _moveDirection.x;
-            TargetLocation.z += _moveDirection.z;
+            TargetLocation.x += _moveDirection.x * _shiftModifier;
+            TargetLocation.z += _moveDirection.z * _shiftModifier;
         }
 
         //Process camera positioning
@@ -145,7 +193,7 @@ public class CameraController : MonoBehaviour
             _viewtargetPos.z + ZoomDistance * Mathf.Sin( RotationAngle + Mathf.PI / 180 )
         );
 
-        transform.position = Vector3.Lerp( transform.position, newPos, 0.5f );
+        transform.position = Vector3.Lerp( transform.position, newPos, 0.9f );
         transform.rotation = Quaternion.LookRotation( _viewtargetPos - transform.position );
     }
 
