@@ -15,8 +15,8 @@ MonoBehaviour:
   m_box:
     m_Name: box
     m_Normal:
-      m_Background: {fileID: 10904, guid: 0000000000000000f000000000000000, type: 0}
-      m_TextColor: {r: 0.79999995, g: 0.79999995, b: 0.79999995, a: 1}
+      m_Background: {fileID: 10910, guid: 0000000000000000f000000000000000, type: 0}
+      m_TextColor: {r: 0.79999995, g: 0.79999995, b: 0.79999995, a: 0}
     m_Hover:
       m_Background: {fileID: 0}
       m_TextColor: {r: 0, g: 0, b: 0, a: 1}
@@ -69,7 +69,7 @@ MonoBehaviour:
     m_ContentOffset: {x: 0, y: 0}
     m_FixedWidth: 0
     m_FixedHeight: 0
-    m_StretchWidth: 1
+    m_StretchWidth: 0
     m_StretchHeight: 0
   m_button:
     m_Name: button
