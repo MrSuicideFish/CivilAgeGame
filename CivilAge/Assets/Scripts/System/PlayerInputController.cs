@@ -53,7 +53,7 @@ public class PlayerInputController : MonoBehaviour
                 Rect selectionRect = new Rect( pos, size );
 
                 //trace to world
-                float dist = 10f;
+                float dist = 1f;
 
                 //Top Left Pos
                 var rectTopLeft = new Vector3( selectionRect.x, Screen.height - selectionRect.y, dist );
@@ -75,10 +75,12 @@ public class PlayerInputController : MonoBehaviour
                 var rectCenter = new Vector3( selectionRect.x + (selectionRect.width / 2), Screen.height - ( selectionRect.y + selectionRect.height / 2 ), dist );
                 rectCenter = Camera.main.ScreenToWorldPoint( rectCenter );
 
-                var width = Vector3.Distance( rectTopLeft, rectTopRight ) * 6;
-                var height = Vector3.Distance( rectTopLeft, rectBotLeft ) * 6;
+                var width = rectTopRight.x - rectTopLeft.x;
+                var height = rectTopLeft.y - rectBotLeft.y;
 
-                RaycastHit[] hitObj = Physics.BoxCastAll( rectCenter, new Vector3( width * 0.5f, height * 0.5f, Camera.main.nearClipPlane ), rectCenter - Camera.main.transform.position, Camera.main.transform.rotation );
+                print( Vector3.Distance( rectTopLeft, rectTopRight ) * CameraController.CurrentCamera.transform.position.y );
+
+                RaycastHit[] hitObj = Physics.BoxCastAll( rectCenter, new Vector3( width, height, Camera.main.nearClipPlane ), rectCenter - Camera.main.transform.position, Camera.main.transform.rotation, 300 );
 
                 foreach(RaycastHit hit in hitObj )
                 {
@@ -87,7 +89,7 @@ public class PlayerInputController : MonoBehaviour
 
                 if ( !DebugSphereA )
                 {
-                    float scale = 0.2f;
+                    float scale = 0.05f;
 
                     DebugSphereA = GameObject.CreatePrimitive( PrimitiveType.Cube );
                     DebugSphereA.transform.localScale = Vector3.one * scale;
