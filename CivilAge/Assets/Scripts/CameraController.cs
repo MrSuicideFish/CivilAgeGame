@@ -97,6 +97,7 @@ public class CameraController : MonoBehaviour
             //Set final position
             transform.position = Vector3.Lerp( transform.position, newPos, 0.9f );
             transform.rotation = Quaternion.LookRotation( _viewtargetPos - transform.position );
+
         }
     }
     
@@ -110,6 +111,7 @@ public class CameraController : MonoBehaviour
         CurrentCamera.RotationAngle += amount * CameraRotationSpeed;
     }
 
+    float CurrentGridScale = 0.0f;
     public void ZoomCamera(float amount )
     {
         var _newZoom = CurrentCamera.ZoomDistance + ( amount * CameraZoomSpeed );

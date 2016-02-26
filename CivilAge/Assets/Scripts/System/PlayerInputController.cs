@@ -28,9 +28,11 @@ public class PlayerInputController : MonoBehaviour
 
         // - Selection
         if ( Input.GetMouseButtonDown( ( int )MouseDragMode.DRAG_SELECT ) )
+        {
             ToggleMouseDragMode( MouseDragMode.DRAG_SELECT );
+        }
 
-        if ( Input.GetMouseButtonUp( (int)MouseDragMode.DRAG_SELECT) )
+        if ( Input.GetMouseButtonUp( ( int )MouseDragMode.DRAG_SELECT ) )
             ToggleMouseDragMode( MouseDragMode.NONE );
 
         // - Camera Rotate
@@ -41,104 +43,8 @@ public class PlayerInputController : MonoBehaviour
             ToggleMouseDragMode( MouseDragMode.NONE );
 
         //Update drag position
-        if (DragMode != MouseDragMode.NONE )
+        if ( DragMode != MouseDragMode.NONE )
             DragPosition = new Vector2( Input.mousePosition.x, Screen.height - Input.mousePosition.y );
-
-        ///////////////////////
-        // Other mouse controls
-        ///////////////////////
-        switch ( DragMode )
-        {
-            case MouseDragMode.DRAG_SELECT:
-
-                var pos = new Vector2( DragStartPosition.x, DragStartPosition.y );
-                var size = DragPosition - DragStartPosition;
-
-                //Process rect
-                Rect viewportRect = new Rect( 0, 0, Screen.width, Screen.height );
-
-                //trace to world
-                float dist = 15;
-
-                //Top Left Pos
-                var rectTopLeft = new Vector3( viewportRect.x, viewportRect.y, dist );
-                rectTopLeft = Camera.main.ScreenToWorldPoint( rectTopLeft );
-
-                //bottom left pos
-                var rectBotLeft = new Vector3( viewportRect.x, viewportRect.height, dist );
-                rectBotLeft = Camera.main.ScreenToWorldPoint( rectBotLeft );
-
-                //bottom right pos
-                var rectBotRight = new Vector3( viewportRect.width, viewportRect.height, dist );
-                rectBotRight = Camera.main.ScreenToWorldPoint( rectBotRight );
-
-                //top right
-                var rectTopRight = new Vector3( viewportRect.width, viewportRect.y, dist );
-                rectTopRight = Camera.main.ScreenToWorldPoint( rectTopRight );
-
-                //Center
-                var rectCenter = new Vector3( viewportRect.x + viewportRect.width / 2, viewportRect.y + viewportRect.height / 2, dist );
-                rectCenter = Camera.main.ScreenToWorldPoint( rectCenter );
-
-                //Top Left Pos
-                var virtualTopLeft = new Vector3( viewportRect.x, Screen.height - viewportRect.y, dist );
-                virtualTopLeft = Camera.main.ScreenToWorldPoint( virtualTopLeft );
-
-                RaycastHit[] ObjsInView = Physics.BoxCastAll( Camera.main.transform.position,
-                    new Vector3( Vector3.Distance( rectTopLeft, rectTopRight ) / 2, Vector3.Distance( rectTopLeft, rectBotLeft ) / 2, dist ),
-                    rectCenter - Camera.main.transform.position );
-
-                foreach(RaycastHit obj in ObjsInView )
-                {
-                    if ( obj.transform.GetComponent<WorldActor>() == null ) continue;
-
-                    //Translate obj bounds to screen rect
-                    if ( ScreenSelectionRect.Overlaps( GetScreenRectByBounds( obj.collider.bounds ), true ) )
-                    {
-                        obj.collider.GetComponent<MeshRenderer>( ).material.color = Color.red;
-                    }
-                }
-
-                //Gets all 'WorldActors' from array of hit objects and returns array of worldActors
-                //SelectedActors = hitObjs.Where( x => x.collider.gameObject.GetComponent<WorldActor>( ) != null ).Select( x => x.collider.GetComponent<WorldActor>( ) ).ToArray( );
-
-                //if ( !DebugSphereA )
-                //{
-                //    float scale = 0.05f;
-
-                //    DebugSphereA = GameObject.CreatePrimitive( PrimitiveType.Cube );
-                //    DebugSphereA.transform.localScale = Vector3.one * scale;
-
-                //    DebugSphereB = GameObject.CreatePrimitive( PrimitiveType.Cube );
-                //    DebugSphereB.transform.localScale = Vector3.one * scale;
-
-                //    DebugSphereC = GameObject.CreatePrimitive( PrimitiveType.Cube );
-                //    DebugSphereC.transform.localScale = Vector3.one * scale;
-
-                //    DebugSphereD = GameObject.CreatePrimitive( PrimitiveType.Cube );
-                //    DebugSphereD.transform.localScale = Vector3.one * scale;
-
-                //    DebugSphereE = GameObject.CreatePrimitive( PrimitiveType.Cube );
-                //    DebugSphereE.transform.localScale = Vector3.one * scale;
-                //}
-
-                //DebugSphereA.transform.position = rectTopLeft;
-                //DebugSphereB.transform.position = rectBotLeft;
-                //DebugSphereC.transform.position = rectBotRight;
-                //DebugSphereD.transform.position = rectTopRight;
-                //DebugSphereE.transform.position = rectCenter;
-
-                break;
-
-            case MouseDragMode.DRAG_CAMERA_ROTATE:
-
-                var diff = ( DragPosition.x - DragStartPosition.x ) / Screen.width;
-                CameraController.CurrentCamera.RotateCamera( diff );
-            break;
-
-            default:
-                break;
-        }
 
         //Mouse wheel scroll
         var _scrollValue = -Input.GetAxis( "Mouse ScrollWheel" );
@@ -154,8 +60,75 @@ public class PlayerInputController : MonoBehaviour
         moveDir.x = Input.GetAxis( "Horizontal" );
         moveDir.z = Input.GetAxis( "Vertical" );
 
-        if( moveDir != Vector3.zero)
-            CameraController.CurrentCamera.MoveCamera(moveDir, Input.GetKey(KeyCode.LeftShift) ? 2 : 1);
+        if ( moveDir != Vector3.zero )
+            CameraController.CurrentCamera.MoveCamera( moveDir, Input.GetKey( KeyCode.LeftShift ) ? 2 : 1 );
+    }
+
+    void FixedUpdate( )
+    {
+        ///////////////////////
+        // Other mouse controls
+        ///////////////////////
+        switch ( DragMode )
+        {
+            case MouseDragMode.DRAG_SELECT:
+
+                var pos = new Vector2( DragStartPosition.x, DragStartPosition.y );
+                var size = DragPosition - DragStartPosition;
+
+                //Process rect
+                Rect viewportRect = new Rect( 0, 0, Screen.width, Screen.height );
+
+                //trace to world
+                float dist = 30;
+
+                //Top Left Pos
+                var viewRectTopLeft = new Vector3( viewportRect.x, viewportRect.y, dist );
+                viewRectTopLeft = Camera.main.ScreenToWorldPoint( viewRectTopLeft );
+
+                //bottom left pos
+                var viewRectBotLeft = new Vector3( viewportRect.x, viewportRect.height, dist );
+                viewRectBotLeft = Camera.main.ScreenToWorldPoint( viewRectBotLeft );
+
+                //bottom right pos
+                var viewRectBotRight = new Vector3( viewportRect.width, viewportRect.height, dist );
+                viewRectBotRight = Camera.main.ScreenToWorldPoint( viewRectBotRight );
+
+                //top right
+                var viewRectTopRight = new Vector3( viewportRect.width, viewportRect.y, dist );
+                viewRectTopRight = Camera.main.ScreenToWorldPoint( viewRectTopRight );
+
+                //Center
+                var viewRectCenter = new Vector3( viewportRect.x + viewportRect.width / 2, viewportRect.y + viewportRect.height / 2, dist );
+                viewRectCenter = Camera.main.ScreenToWorldPoint( viewRectCenter );
+
+                RaycastHit[] ObjsInView = Physics.BoxCastAll( Camera.main.transform.position,
+                    new Vector3( Vector3.Distance( viewRectTopLeft, viewRectTopRight ) / 2, Vector3.Distance( viewRectTopLeft, viewRectBotLeft ) / 2, dist ),
+                    viewRectCenter - Camera.main.transform.position );
+
+                foreach(RaycastHit obj in ObjsInView )
+                {
+                    if ( obj.transform.GetComponent<WorldActor>() == null ) continue;
+
+                    //Translate obj bounds to screen rect
+                    if ( ScreenSelectionRect.Overlaps( GetScreenRectByBounds( obj.collider.bounds ), true ) )
+                    {
+                        obj.collider.GetComponent<MeshRenderer>( ).material.color = Color.red;
+                    }
+                }
+
+                break;
+
+            case MouseDragMode.DRAG_CAMERA_ROTATE:
+
+                var diff = ( DragPosition.x - DragStartPosition.x ) / Screen.width;
+                CameraController.CurrentCamera.RotateCamera( diff );
+            break;
+
+            default:
+                break;
+        }
+
     }
 
     void ToggleMouseDragMode( MouseDragMode newMode )
@@ -178,9 +151,8 @@ public class PlayerInputController : MonoBehaviour
 
     Rect GetScreenRectByBounds( Bounds bounds )
     {
-        //Transform corner of bounds to screen-space
+        //Define bounds
         var centerPos = bounds.center;
-
         var x1y1z1 = new Vector3( centerPos.x - bounds.extents.x, centerPos.y - bounds.extents.y, centerPos.z + bounds.extents.z );
         var x2y1z1 = new Vector3( centerPos.x + bounds.extents.x, centerPos.y - bounds.extents.y, centerPos.z + bounds.extents.z );
         var x1y2z1 = new Vector3( centerPos.x - bounds.extents.x, centerPos.y + bounds.extents.y, centerPos.z + bounds.extents.z );
@@ -191,7 +163,7 @@ public class PlayerInputController : MonoBehaviour
         var x1y2z2 = new Vector3( centerPos.x - bounds.extents.x, centerPos.y + bounds.extents.y, centerPos.z - bounds.extents.z );
         var x2y2z2 = new Vector3( centerPos.x + bounds.extents.x, centerPos.y + bounds.extents.y, centerPos.z - bounds.extents.z );
 
-        //Raytrace bound positions to screen
+        //Transform corners of bounds to screen-space
         Vector2[] projScrPositions = new Vector2[]
         {
             Camera.main.WorldToScreenPoint( x1y1z1 ),
@@ -215,7 +187,7 @@ public class PlayerInputController : MonoBehaviour
         //Sort positions
         for(int i = 0; i < projScrPositions.Length; i++ )
         {
-            //Setup defaults
+            //Quick-default
             if ( TopLeft == Vector2.zero )
                 TopLeft = projScrPositions[i];
 
@@ -262,23 +234,6 @@ public class PlayerInputController : MonoBehaviour
         BottomLeft.y    = Screen.height - BottomLeft.y;
 
         return new Rect( TopLeft, new Vector2( TopRight.x - TopLeft.x, BottomLeft.y - TopLeft.y ) );
-    }
-
-    private enum RectExtentDirection
-    {
-        TopLeft = 0,
-        TopRight = 1,
-        BottomLeft = 2,
-        BottomRight = 3
-    }
-
-    void ExchangeArrayIdx( Vector2[] positions, int from, int to)
-    {
-        Vector2 temporary;
-
-        temporary = positions[from];
-        positions[from] = positions[to];
-        positions[to] = temporary;
     }
 
     Texture2D BoxTex;

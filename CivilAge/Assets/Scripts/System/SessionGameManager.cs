@@ -64,6 +64,18 @@ public class SessionGameManager : MonoBehaviour
         }
     }
 
+    private static GameObject worldGridObj;
+    public static GameObject WorldGridObject
+    {
+        get
+        {
+            if ( worldGridObj == null )
+                worldGridObj = GameObject.FindGameObjectWithTag( "GridPlane" );
+
+            return worldGridObj;
+        }
+    }
+
     //Pre-Loaded
     public GUISkin SystemGUISkin;
     public GUISkin DefaultGUISkin;
