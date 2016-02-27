@@ -169,4 +169,4 @@ Material:
       data:
         first:
           name: _GridColor
-        second: {r: 0.25735295, g: 0.058569983, b: 0, a: 1}
+        second: {r: 0.058823526, g: 0.06531457, b: 1, a: 1}

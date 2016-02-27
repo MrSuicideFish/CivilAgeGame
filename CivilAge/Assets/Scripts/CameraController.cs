@@ -121,6 +121,19 @@ public class CameraController : MonoBehaviour
         }
     }
 
+    public void MoveToFocusSingle( Transform target )
+    {
+        TargetLocation = target.position;
+    }
+
+    public void MoveToFocusMultiple(Transform[] targets )
+    {
+        for(int i = 0; i < targets.Length; i++ )
+        {
+
+        }
+    }
+
     public void MoveCamera(Vector3 direction, float speedModifier = 1.0f )
     {
         //Transform move direction and increment location

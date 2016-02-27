@@ -53,6 +53,14 @@ public class PlayerInputController : MonoBehaviour
             CameraController.CurrentCamera.ZoomCamera( _scrollValue );
         }
 
+        //////////////////////
+        // Keys / Buttons
+        /////////////////////
+        if ( SelectedActors.Length != 0 && Input.GetButtonDown( "Focus Selection" ) )
+        {
+            CameraController.CurrentCamera.MoveToFocusSingle( SelectedActors[0].transform );
+        }
+
         ///////////////////////
         // Process Move
         ///////////////////////
@@ -80,7 +88,7 @@ public class PlayerInputController : MonoBehaviour
                 Rect viewportRect = new Rect( 0, 0, Screen.width, Screen.height );
 
                 //trace to world
-                float dist = 30;
+                float dist = 80;
 
                 //Top Left Pos
                 var viewRectTopLeft = new Vector3( viewportRect.x, viewportRect.y, dist );
@@ -106,16 +114,9 @@ public class PlayerInputController : MonoBehaviour
                     new Vector3( Vector3.Distance( viewRectTopLeft, viewRectTopRight ) / 2, Vector3.Distance( viewRectTopLeft, viewRectBotLeft ) / 2, dist ),
                     viewRectCenter - Camera.main.transform.position );
 
-                foreach(RaycastHit obj in ObjsInView )
-                {
-                    if ( obj.transform.GetComponent<WorldActor>() == null ) continue;
-
-                    //Translate obj bounds to screen rect
-                    if ( ScreenSelectionRect.Overlaps( GetScreenRectByBounds( obj.collider.bounds ), true ) )
-                    {
-                        obj.collider.GetComponent<MeshRenderer>( ).material.color = Color.red;
-                    }
-                }
+                SelectedActors = ObjsInView.Where( x => x.collider.GetComponent<WorldActor>( ) != null )
+                    .Where( x => ScreenSelectionRect.Overlaps( GetScreenRectByBounds( x.collider.bounds ), true ) )
+                        .Select( x => x.collider.GetComponent<WorldActor>( ) ).ToArray( );
 
                 break;
 
@@ -123,6 +124,7 @@ public class PlayerInputController : MonoBehaviour
 
                 var diff = ( DragPosition.x - DragStartPosition.x ) / Screen.width;
                 CameraController.CurrentCamera.RotateCamera( diff );
+
             break;
 
             default:
@@ -136,9 +138,21 @@ public class PlayerInputController : MonoBehaviour
         switch ( newMode )
         {
             case MouseDragMode.DRAG_SELECT:
+                //Began drag selection
+                Array.ForEach( SelectedActors, x => x.Deselect( ) );
                 break;
 
             case MouseDragMode.DRAG_CAMERA_ROTATE:
+                break;
+
+            case MouseDragMode.NONE:
+
+                //Ended drag selection
+                if(DragMode == MouseDragMode.DRAG_SELECT )
+                {
+                    Array.ForEach( SelectedActors, x => x.Select( ) );
+                }
+
                 break;
 
             default:
