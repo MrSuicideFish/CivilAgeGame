@@ -15,7 +15,6 @@ public enum PLAYER_TYPE
 /// <summary>
 /// Session Player
 /// --------------
-/// 
 /// The SessionPlayer class contains all information on a player's status including
 /// things like resources, planetary info, and diplomacy info.
 /// 

@@ -2,7 +2,7 @@
 using UnityEngine.Events;
 using System.Collections;
 
-public enum GameSpeedMode
+public enum VirtualTimeScale
 {
     X1 = 1,
     X2 = 2,
@@ -99,8 +99,8 @@ public class SessionGameManager : MonoBehaviour
     public bool GameIsPaused { get; private set; }
 
     //Game flow
-    GameSpeedMode CurrentGameSpeed = GameSpeedMode.X1;
-    public UnityEvent<GameSpeedMode> OnGameSpeedChanged;
+    VirtualTimeScale CurrentGameSpeed = VirtualTimeScale.X1;
+    public UnityEvent<VirtualTimeScale> OnGameSpeedChanged;
 
     //GAME EVENTS
     public delegate void GamePauseEvent( bool enabled );
@@ -128,11 +128,9 @@ public class SessionGameManager : MonoBehaviour
         }
     }
 
-    public void SetGameSpeed(GameSpeedMode speedMode )
+    public void SetGameSpeed(VirtualTimeScale speedMode )
     {
         if ( speedMode == CurrentGameSpeed ) return;
-
-        Time.timeScale = speedMode.GetHashCode( );
 
         CurrentGameSpeed = speedMode;
         OnGameSpeedChanged.Invoke( CurrentGameSpeed );
