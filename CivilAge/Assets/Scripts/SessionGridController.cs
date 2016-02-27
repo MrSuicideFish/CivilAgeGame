@@ -22,7 +22,7 @@ public class SessionGridController : MonoBehaviour
         transform.position = new Vector3( CameraParent.transform.position.x, 0, CameraParent.transform.position.z );
 
         //Set grid tiling
-        var newGridTiling = Mathf.Lerp( 6, 0f, ( CameraParent.ZoomDistance / CameraParent.MaxZoomDistance ));
+        var newGridTiling = Mathf.Lerp( 6, 0f, ( CameraParent.ZoomDistance / CameraParent.MaxZoomDistance ) );
         var newAnisScale = Mathf.Lerp( 5, 80, ( CameraParent.ZoomDistance / CameraParent.MaxZoomDistance ) );
 
         GridMaterial.SetTextureScale( "_GridAlpha", new Vector2( newGridTiling, newGridTiling ) );

@@ -76,24 +76,56 @@ public class SessionGameManager : MonoBehaviour
         }
     }
 
+    private static PauseScreenController pauseScreen;
+    public static PauseScreenController PauseScreen
+    {
+        get
+        {
+            if(pauseScreen == null )
+            {
+                pauseScreen = GameObject.Instantiate( Resources.Load<GameObject>( "PAUSE_SCREEN" ) ).GetComponent<PauseScreenController>( );
+                PauseScreen.gameObject.transform.SetParent( SessionCanvas.transform, false );
+            }
+
+            return pauseScreen;
+        }
+    }
+
     //Pre-Loaded
     public GUISkin SystemGUISkin;
     public GUISkin DefaultGUISkin;
 
     //Pausing
     public bool GameIsPaused { get; private set; }
-    public UnityEvent<bool> OnPauseToggled;
 
     //Game flow
     GameSpeedMode CurrentGameSpeed = GameSpeedMode.X1;
     public UnityEvent<GameSpeedMode> OnGameSpeedChanged;
+
+    //GAME EVENTS
+    public delegate void GamePauseEvent( bool enabled );
+    public event GamePauseEvent OnPauseToggled;
+
+    /// <summary>
+    /// On the start of the game session
+    /// </summary>
+    void Awake( )
+    {
+    }
 
     public void TogglePause( bool enabled )
     {
         if ( enabled == GameIsPaused ) return;
 
         GameIsPaused = enabled;
-        OnPauseToggled.Invoke( GameIsPaused );
+
+        //Show / hide screen
+        PauseScreen.gameObject.SetActive( GameIsPaused );
+
+        if(OnPauseToggled != null )
+        {
+            OnPauseToggled( GameIsPaused );
+        }
     }
 
     public void SetGameSpeed(GameSpeedMode speedMode )

@@ -22,6 +22,8 @@ public class PlayerInputController : MonoBehaviour
 
     void Update( )
     {
+        if ( SessionGameManager.Instance.GameIsPaused ) return;
+
         //////////////////////
         // Mouse Drag
         /////////////////////
@@ -59,6 +61,11 @@ public class PlayerInputController : MonoBehaviour
         if ( SelectedActors.Length != 0 && Input.GetButtonDown( "Focus Selection" ) )
         {
             CameraController.CurrentCamera.MoveToFocusSingle( SelectedActors[0].transform );
+        }
+
+        if ( !SessionGameManager.Instance.GameIsPaused && Input.GetKeyDown( KeyCode.Escape ) )
+        {
+            SessionGameManager.Instance.TogglePause( true );
         }
 
         ///////////////////////
