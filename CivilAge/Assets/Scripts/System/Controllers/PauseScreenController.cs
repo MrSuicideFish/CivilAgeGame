@@ -1,12 +1,6 @@
 ﻿using UnityEngine;
 using System.Collections;
 
-public struct PauseMenu
-{
-    string MenuName;
-    int MenuLayer;
-}
-
 public class PauseScreenController : MonoBehaviour
 {
     public static PauseScreenController Instance;

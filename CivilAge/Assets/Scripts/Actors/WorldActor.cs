@@ -16,10 +16,7 @@ public class WorldActor : MonoBehaviour, ISelectable
         Owner = newOwner;
     }
 
-    public virtual void OnActorSelected( )
-    {
-        print( "Selected: " + name );
-    }
+    public virtual void OnActorSelected( ) { }
 
     public virtual void OnActorDeselected( ) { }
 
@@ -29,6 +26,7 @@ public class WorldActor : MonoBehaviour, ISelectable
 
         //Enable selection highlight
         GetComponent<MeshRenderer>( ).material.SetFloat( "_OutlineWidth", 0.2f );
+        GetComponent<MeshRenderer>( ).material.SetColor( "_HighlightColor", SessionGameManager.SelectedActorHightlightColor );
 
         SendMessage( "OnSelect", SendMessageOptions.DontRequireReceiver );
     }

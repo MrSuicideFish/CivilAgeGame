@@ -35,19 +35,24 @@ public class CameraController : MonoBehaviour
     //Flags
     public bool LockEnabled { get; private set; }
 
-    //Locomotion
-    private Vector3 TargetLocation;
+    private Vector3 TargetLocation      = Vector3.zero,
+                    DragStartPosition   = Vector3.zero,
+                    DragPosition        = Vector3.zero;
+
     private Transform ViewTarget;
 
-    public float CameraMoveSpeed { get; private set; }
-    public float CameraRotationSpeed { get; private set; }
-    public float CameraZoomSpeed { get; private set; }
+    private float   TargetZoomDistance  = 0.0f,
+                    CurrentGridScale    = 0.0f;
 
-    public float MinZoomDistance { get; private set; }
-    public float ZoomDistance { get; private set; }
-    public float MaxZoomDistance { get; private set; }
+    ///Camera Locomotion
+    public float CameraMoveSpeed        { get; private set; }
+    public float CameraRotationSpeed    { get; private set; }
+    public float CameraZoomSpeed        { get; private set; }
 
-    public float RotationAngle { get; private set; }
+    public float MinZoomDistance    { get; private set; }
+    public float ZoomDistance       { get; private set; }
+    public float MaxZoomDistance    { get; private set; }
+    public float RotationAngle      { get; private set; }
 
     void Awake( )
     {
@@ -71,9 +76,6 @@ public class CameraController : MonoBehaviour
         RotationAngle = 0;
     }
 
-    private Vector3 DragStartPosition = Vector3.zero;
-    private Vector3 DragPosition = Vector3.zero;
-    private float TargetZoomDistance = 0;
     void Update( )
     {
         if ( !LockEnabled )
@@ -111,7 +113,6 @@ public class CameraController : MonoBehaviour
         CurrentCamera.RotationAngle += amount * CameraRotationSpeed;
     }
 
-    float CurrentGridScale = 0.0f;
     public void ZoomCamera(float amount )
     {
         var _newZoom = CurrentCamera.ZoomDistance + ( amount * CameraZoomSpeed );
@@ -123,7 +124,7 @@ public class CameraController : MonoBehaviour
 
     public void MoveToFocusSingle( Transform target )
     {
-        TargetLocation = target.position;
+        TargetLocation = new Vector3( target.position.x, 0, target.position.z );
     }
 
     public void MoveToFocusMultiple(Transform[] targets )

@@ -147,4 +147,4 @@ Material:
       data:
         first:
           name: _HighlightColor
-        second: {r: 0.034482718, g: 1, b: 0, a: 1}
+        second: {r: 0, g: 1, b: 0, a: 1}

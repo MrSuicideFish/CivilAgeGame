@@ -13,21 +13,82 @@ public class PlayerInputController : MonoBehaviour
     }
 
     private Rect ScreenSelectionRect;
+
     private MouseDragMode DragMode = MouseDragMode.NONE;
-    private Vector2 DragStartPosition,
+
+    private Vector2 MouseScreenPos,
+                    DragStartPosition,
                     DragPosition,
                     DragEndPosition;
 
+    private Vector3 MouseWorldPos;
+
+    private Ray MouseHoverRay;
+
+    private RaycastHit HoveredActorHit;
     public WorldActor[] SelectedActors;
+
+    public float MouseTraceDist = 2.0f;
+
+    ///////////////////////
+    // Initiation
+    ///////////////////////
+    void Awake( )
+    {
+        SessionGameManager.OnPauseToggled += OnGamePaused;
+    }
+
+    ///////////////////////
+    // Event Callbacks
+    ///////////////////////
+    void OnGamePaused( bool enabled )
+    {
+        //Un-highlight hovered actor
+        if ( HoveredActorHit.transform )
+        {
+            HoveredActorHit.transform.GetComponent<MeshRenderer>( ).material.SetFloat( "_OutlineWidth", 0.0f );
+            HoveredActorHit = new RaycastHit( ); //to set to null
+        }
+    }
 
     void Update( )
     {
         if ( SessionGameManager.Instance.GameIsPaused ) return;
 
         //////////////////////
+        // Mouse Hover
+        /////////////////////
+        //Convert mouse screen position to world
+        MouseScreenPos = new Vector2( Input.mousePosition.x, Screen.height - Input.mousePosition.y );
+        MouseWorldPos = Camera.main.ScreenToWorldPoint( new Vector3( MouseScreenPos.x, Screen.height - MouseScreenPos.y, MouseTraceDist ) );
+
+        //Define ray
+        MouseHoverRay = new Ray
+            (
+                MouseWorldPos, //Origin
+                MouseWorldPos - CameraController.CurrentCamera.transform.position //Direction
+            );
+
+        //Cast
+        var oldHoverActorHit = HoveredActorHit;
+        Physics.Raycast( MouseHoverRay, out HoveredActorHit, Mathf.Infinity, 1 << 8 );
+
+        //Unhighlight old
+        if ( !oldHoverActorHit.Equals( HoveredActorHit ) && oldHoverActorHit.transform && !oldHoverActorHit.transform.GetComponent<WorldActor>( ).IsSelected )
+        {
+            oldHoverActorHit.transform.GetComponent<MeshRenderer>( ).material.SetFloat( "_OutlineWidth", 0.0f );
+        }
+
+        //Highlight actor
+        if ( HoveredActorHit.transform && !HoveredActorHit.transform.GetComponent<WorldActor>().IsSelected )
+        {
+            HoveredActorHit.transform.GetComponent<MeshRenderer>( ).material.SetFloat( "_OutlineWidth", 0.2f );
+            HoveredActorHit.transform.GetComponent<MeshRenderer>( ).material.SetColor( "_HighlightColor", SessionGameManager.HoveredActorHightlightColor );
+        }
+
+        //////////////////////
         // Mouse Drag
         /////////////////////
-
         // - Selection
         if ( Input.GetMouseButtonDown( ( int )MouseDragMode.DRAG_SELECT ) )
         {
@@ -35,7 +96,19 @@ public class PlayerInputController : MonoBehaviour
         }
 
         if ( Input.GetMouseButtonUp( ( int )MouseDragMode.DRAG_SELECT ) )
+        {
             ToggleMouseDragMode( MouseDragMode.NONE );
+
+            if ( HoveredActorHit.transform )
+            {
+                SelectedActors = new WorldActor[]
+                {
+                    HoveredActorHit.transform.GetComponent<WorldActor>()
+                };
+
+                SelectedActors[0].Select( );
+            }
+        }
 
         // - Camera Rotate
         if ( Input.GetMouseButtonDown( ( int )MouseDragMode.DRAG_CAMERA_ROTATE ) )
@@ -46,7 +119,7 @@ public class PlayerInputController : MonoBehaviour
 
         //Update drag position
         if ( DragMode != MouseDragMode.NONE )
-            DragPosition = new Vector2( Input.mousePosition.x, Screen.height - Input.mousePosition.y );
+            DragPosition = MouseScreenPos;
 
         //Mouse wheel scroll
         var _scrollValue = -Input.GetAxis( "Mouse ScrollWheel" );
@@ -82,15 +155,11 @@ public class PlayerInputController : MonoBehaviour
     void FixedUpdate( )
     {
         ///////////////////////
-        // Other mouse controls
+        // Process Drag
         ///////////////////////
         switch ( DragMode )
         {
             case MouseDragMode.DRAG_SELECT:
-
-                var pos = new Vector2( DragStartPosition.x, DragStartPosition.y );
-                var size = DragPosition - DragStartPosition;
-
                 //Process rect
                 Rect viewportRect = new Rect( 0, 0, Screen.width, Screen.height );
 
@@ -122,7 +191,7 @@ public class PlayerInputController : MonoBehaviour
                     viewRectCenter - Camera.main.transform.position );
 
                 SelectedActors = ObjsInView.Where( x => x.collider.GetComponent<WorldActor>( ) != null )
-                    .Where( x => ScreenSelectionRect.Overlaps( GetScreenRectByBounds( x.collider.bounds ), true ) )
+                    .Where( x => ScreenSelectionRect.Overlaps( CivUI.GetScreenRectByBounds( x.collider.bounds ), true ) )
                         .Select( x => x.collider.GetComponent<WorldActor>( ) ).ToArray( );
 
                 break;
@@ -166,96 +235,11 @@ public class PlayerInputController : MonoBehaviour
                 break;
         }
 
-        DragStartPosition = new Vector2( Input.mousePosition.x, Screen.height - Input.mousePosition.y );
+        DragStartPosition = MouseScreenPos;
         DragMode = newMode;
     }
 
-    Rect GetScreenRectByBounds( Bounds bounds )
-    {
-        //Define bounds
-        var centerPos = bounds.center;
-        var x1y1z1 = new Vector3( centerPos.x - bounds.extents.x, centerPos.y - bounds.extents.y, centerPos.z + bounds.extents.z );
-        var x2y1z1 = new Vector3( centerPos.x + bounds.extents.x, centerPos.y - bounds.extents.y, centerPos.z + bounds.extents.z );
-        var x1y2z1 = new Vector3( centerPos.x - bounds.extents.x, centerPos.y + bounds.extents.y, centerPos.z + bounds.extents.z );
-        var x2y2z1 = new Vector3( centerPos.x + bounds.extents.x, centerPos.y + bounds.extents.y, centerPos.z + bounds.extents.z );
-
-        var x1y1z2 = new Vector3( centerPos.x - bounds.extents.x, centerPos.y - bounds.extents.y, centerPos.z - bounds.extents.z );
-        var x2y1z2 = new Vector3( centerPos.x + bounds.extents.x, centerPos.y - bounds.extents.y, centerPos.z - bounds.extents.z );
-        var x1y2z2 = new Vector3( centerPos.x - bounds.extents.x, centerPos.y + bounds.extents.y, centerPos.z - bounds.extents.z );
-        var x2y2z2 = new Vector3( centerPos.x + bounds.extents.x, centerPos.y + bounds.extents.y, centerPos.z - bounds.extents.z );
-
-        //Transform corners of bounds to screen-space
-        Vector2[] projScrPositions = new Vector2[]
-        {
-            Camera.main.WorldToScreenPoint( x1y1z1 ),
-            Camera.main.WorldToScreenPoint( x2y1z1 ),
-            Camera.main.WorldToScreenPoint( x1y2z1 ),
-            Camera.main.WorldToScreenPoint( x2y2z1 ),
-
-            Camera.main.WorldToScreenPoint( x1y1z2 ),
-            Camera.main.WorldToScreenPoint( x2y1z2 ),
-            Camera.main.WorldToScreenPoint( x1y2z2 ),
-            Camera.main.WorldToScreenPoint( x2y2z2 )
-        };
-
-        //Bubble-sort positions
-        //-TopLeft most
-        Vector2 TopLeft     = Vector2.zero,
-                TopRight    = Vector2.zero,
-                BottomLeft  = Vector2.zero,
-                BottomRight = Vector2.zero;
-
-        //Sort positions
-        for(int i = 0; i < projScrPositions.Length; i++ )
-        {
-            //Quick-default
-            if ( TopLeft == Vector2.zero )
-                TopLeft = projScrPositions[i];
-
-            if ( TopRight == Vector2.zero )
-                TopRight = projScrPositions[i];
-
-            if ( BottomLeft == Vector2.zero )
-                BottomLeft = projScrPositions[i];
-
-            if ( BottomRight == Vector2.zero )
-                BottomRight = projScrPositions[i];
-
-            //Test top left
-            if (projScrPositions[i].x <= TopLeft.x &&
-                projScrPositions[i].y >= TopLeft.y )
-            {
-                TopLeft = projScrPositions[i];
-            }
-
-            //Test top right
-            if ( projScrPositions[i].x >= TopRight.x &&
-                projScrPositions[i].y >= TopRight.y )
-            {
-                TopRight = projScrPositions[i];
-            }
-
-            //Test bottom left
-            if ( projScrPositions[i].x <= BottomLeft.x &&
-                projScrPositions[i].y <= BottomLeft.y )
-            {
-                BottomLeft = projScrPositions[i];
-            }
-
-            //Test bottom right
-            if ( projScrPositions[i].x >= BottomRight.x &&
-                projScrPositions[i].y <= BottomRight.y )
-            {
-                BottomRight = projScrPositions[i];
-            }
-        }
-
-        //Screen height offset
-        TopLeft.y       = Screen.height - TopLeft.y;
-        BottomLeft.y    = Screen.height - BottomLeft.y;
-
-        return new Rect( TopLeft, new Vector2( TopRight.x - TopLeft.x, BottomLeft.y - TopLeft.y ) );
-    }
+    
 
     Texture2D BoxTex;
     GameObject DebugSphereA,
@@ -268,6 +252,7 @@ public class PlayerInputController : MonoBehaviour
         //Calculate selecton rect
         if ( DragMode == MouseDragMode.DRAG_SELECT )
         {
+            //Note: move rect processing to Update() or FixedUpdate() and only draw in GUI
             var pos = new Vector2( DragStartPosition.x, DragStartPosition.y );
             var size = DragPosition - DragStartPosition;
 
@@ -284,4 +269,5 @@ public class PlayerInputController : MonoBehaviour
             GUI.DrawTexture( ScreenSelectionRect, BoxTex, ScaleMode.StretchToFill );
         }
     }
+
 }

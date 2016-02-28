@@ -104,7 +104,11 @@ public class SessionGameManager : MonoBehaviour
 
     //GAME EVENTS
     public delegate void GamePauseEvent( bool enabled );
-    public event GamePauseEvent OnPauseToggled;
+    public static event GamePauseEvent OnPauseToggled;
+
+    //Colors
+    public static Color HoveredActorHightlightColor     = new Color( 0.8f, 0.56f, 0.2f ),
+                        SelectedActorHightlightColor    = new Color( 0, 1.0f, 0 );
 
     /// <summary>
     /// On the start of the game session
