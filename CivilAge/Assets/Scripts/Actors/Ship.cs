@@ -24,12 +24,20 @@ public class Ship : WorldActor
     //--External Components
     private GameObject HealthBar;
 
+    //--Actor Commands
+    delegate void GoTo( );
+
     //Instance initiation
     public virtual void Awake( )
     {
         //Init internal components
         MeshRenderer = GetComponent<MeshRenderer>( );
         BoxCollider = GetComponent<BoxCollider>( );
+
+        //Setup context commands
+        ContextCommands = new ContextMenuCommand[1];
+        ContextCommands[0] = new ContextMenuCommand( );
+        ContextCommands[0].Name = "Go Here";
     }
 
     public virtual void Start( )
@@ -41,8 +49,8 @@ public class Ship : WorldActor
     }
 
     //Locomotion Methods
-    void GoToPosition( Vector2 newPosition ) { }
-    void FollowShip( Transform shipTransform ) { }
+    void GoToPosition( ) { }
+    void FollowShip( ) { }
 
     //Logistics
     public void Rename( string newName )
@@ -79,7 +87,11 @@ public class Ship : WorldActor
 
             healthBarRect.anchorMin = newPos;
             healthBarRect.anchorMax = newPos;
-
         }
+    }
+
+    public override ContextMenuCommand[] GetContextCommands( WorldActor[] selectedActor, WorldActor targetActor )
+    {
+        return base.GetContextCommands( selectedActor, targetActor );
     }
 }

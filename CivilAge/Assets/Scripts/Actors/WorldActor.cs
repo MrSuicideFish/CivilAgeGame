@@ -11,6 +11,8 @@ public class WorldActor : MonoBehaviour, ISelectable
 
     public bool IsSelected { get; private set; }
 
+    public ContextMenuCommand[] ContextCommands { get; protected set; }
+
     public virtual void TransferOwnership( SessionPlayer newOwner )
     {
         Owner = newOwner;
@@ -39,5 +41,12 @@ public class WorldActor : MonoBehaviour, ISelectable
         GetComponent<MeshRenderer>( ).material.SetFloat( "_OutlineWidth", 0.0f );
 
         SendMessage( "OnDeselect", SendMessageOptions.DontRequireReceiver );
+    }
+
+    public virtual ContextMenuCommand[] GetContextCommands( WorldActor[] selectedActor, WorldActor targetActor )
+    {
+        if ( Array.Equals( ContextCommands, null ) ) ContextCommands = new ContextMenuCommand[0];
+
+        return ContextCommands;
     }
 }

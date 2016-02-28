@@ -2,6 +2,7 @@
 using System;
 using System.Linq;
 using System.Collections;
+using System.Collections.Generic;
 
 public class PlayerInputController : MonoBehaviour
 {
@@ -16,6 +17,8 @@ public class PlayerInputController : MonoBehaviour
 
     private MouseDragMode DragMode = MouseDragMode.NONE;
 
+    private float DragTimer = 0.0f;
+    private bool IsDragging = false;
     private Vector2 MouseScreenPos,
                     DragStartPosition,
                     DragPosition,
@@ -27,6 +30,8 @@ public class PlayerInputController : MonoBehaviour
 
     private RaycastHit HoveredActorHit;
     public WorldActor[] SelectedActors;
+
+    private RectTransform ActionContextMenu;
 
     public float MouseTraceDist = 2.0f;
 
@@ -92,34 +97,99 @@ public class PlayerInputController : MonoBehaviour
         // - Selection
         if ( Input.GetMouseButtonDown( ( int )MouseDragMode.DRAG_SELECT ) )
         {
-            ToggleMouseDragMode( MouseDragMode.DRAG_SELECT );
+            if ( !UIContextMenu.IsHovering )
+            {
+                ToggleMouseDragMode( MouseDragMode.DRAG_SELECT );
+            }
         }
 
         if ( Input.GetMouseButtonUp( ( int )MouseDragMode.DRAG_SELECT ) )
         {
-            ToggleMouseDragMode( MouseDragMode.NONE );
-
-            if ( HoveredActorHit.transform )
+            if ( !UIContextMenu.IsHovering )
             {
-                SelectedActors = new WorldActor[]
-                {
-                    HoveredActorHit.transform.GetComponent<WorldActor>()
-                };
+                ToggleMouseDragMode( MouseDragMode.NONE );
 
-                SelectedActors[0].Select( );
+                if ( HoveredActorHit.transform )
+                {
+                    SelectedActors = new WorldActor[]
+                    {
+                    HoveredActorHit.transform.GetComponent<WorldActor>()
+                    };
+
+                    SelectedActors[0].Select( );
+                }
             }
         }
 
         // - Camera Rotate
         if ( Input.GetMouseButtonDown( ( int )MouseDragMode.DRAG_CAMERA_ROTATE ) )
+        {
             ToggleMouseDragMode( MouseDragMode.DRAG_CAMERA_ROTATE );
+        }
 
         if ( Input.GetMouseButtonUp( ( int )MouseDragMode.DRAG_CAMERA_ROTATE ) )
-            ToggleMouseDragMode( MouseDragMode.NONE );
+        {
+            if ( IsDragging )
+            {
+                ToggleMouseDragMode( MouseDragMode.NONE );
+            }
+            else
+            {
+                //select hovered if nothing else
+                if ( HoveredActorHit.transform && !SelectedActors.Contains(HoveredActorHit.transform.GetComponent<WorldActor>()))
+                {
+                    foreach(WorldActor actor in SelectedActors )
+                    {
+                        actor.Deselect( );
+                    }
+
+                    SelectedActors = new WorldActor[]
+                    {
+                        HoveredActorHit.transform.GetComponent<WorldActor>()
+                    };
+
+                    SelectedActors[0].Select( );
+                }
+
+                List<ContextMenuTarget> targets = new List<ContextMenuTarget>( );
+
+                //create context content
+                if ( SelectedActors.Length > 0 )
+                {
+                    for(int i = 0; i < SelectedActors.Length; i++ )
+                    {
+                        //create new target
+                        ContextMenuTarget newTarget = new ContextMenuTarget( );
+                        newTarget.Name = "NewTarget";
+                        newTarget.Commands = SelectedActors[i].GetComponent<WorldActor>( ).ContextCommands;
+                        newTarget.TargetActor = SelectedActors[i];
+
+                        //add target to list
+                        targets.Add( newTarget );
+                    }
+
+                    UIContextMenu.Display( targets.ToArray( ), out ActionContextMenu );
+                    ActionContextMenu.position = Input.mousePosition;
+                }
+            }
+        }
 
         //Update drag position
         if ( DragMode != MouseDragMode.NONE )
+        {
             DragPosition = MouseScreenPos;
+
+            if(Vector2.Distance(DragStartPosition, DragPosition ) > 1 )
+            {
+                IsDragging = true;
+            }
+        }
+
+        //Safety reset
+        if(!Input.GetMouseButton( ( int )MouseDragMode.DRAG_CAMERA_ROTATE ) && !Input.GetMouseButton( ( int )MouseDragMode.DRAG_SELECT ) )
+        {
+            ToggleMouseDragMode( MouseDragMode.NONE );
+        }
 
         //Mouse wheel scroll
         var _scrollValue = -Input.GetAxis( "Mouse ScrollWheel" );
@@ -206,7 +276,6 @@ public class PlayerInputController : MonoBehaviour
             default:
                 break;
         }
-
     }
 
     void ToggleMouseDragMode( MouseDragMode newMode )
@@ -228,6 +297,9 @@ public class PlayerInputController : MonoBehaviour
                 {
                     Array.ForEach( SelectedActors, x => x.Select( ) );
                 }
+
+                //stop dragging
+                IsDragging = false;
 
                 break;
 
