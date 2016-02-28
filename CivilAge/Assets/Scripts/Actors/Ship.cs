@@ -19,6 +19,7 @@ public class Ship : WorldActor
 
     //--Internal Components
     private MeshRenderer MeshRenderer;
+    private BoxCollider BoxCollider;
 
     //--External Components
     private GameObject HealthBar;
@@ -28,6 +29,7 @@ public class Ship : WorldActor
     {
         //Init internal components
         MeshRenderer = GetComponent<MeshRenderer>( );
+        BoxCollider = GetComponent<BoxCollider>( );
     }
 
     public virtual void Start( )
@@ -63,12 +65,21 @@ public class Ship : WorldActor
     }
 
     //Update
-    public virtual void FixedUpdate( )
+    public virtual void Update( )
     {
         if ( IsSelected )
         {
-            var newPos = CivUI.GetScreenRectByBounds( MeshRenderer.bounds ).position;
-            HealthBar.GetComponent<RectTransform>( ).anchoredPosition = newPos;
+            var healthBarRect = HealthBar.GetComponent<RectTransform>( );
+            var newPos = Camera.main.WorldToViewportPoint( transform.position );
+
+            //Move to center
+            //newPos.x -= healthBarRect.rect.width / 2;
+            newPos.x -= 0.035f;
+            newPos.y += 0.075f;
+
+            healthBarRect.anchorMin = newPos;
+            healthBarRect.anchorMax = newPos;
+
         }
     }
 }

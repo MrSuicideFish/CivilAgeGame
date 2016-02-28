@@ -25,7 +25,7 @@ public class WorldActor : MonoBehaviour, ISelectable
         IsSelected = true;
 
         //Enable selection highlight
-        GetComponent<MeshRenderer>( ).material.SetFloat( "_OutlineWidth", 0.2f );
+        GetComponent<MeshRenderer>( ).material.SetFloat( "_OutlineWidth", SessionGameManager.GlobalHighlightWidth );
         GetComponent<MeshRenderer>( ).material.SetColor( "_HighlightColor", SessionGameManager.SelectedActorHightlightColor );
 
         SendMessage( "OnSelect", SendMessageOptions.DontRequireReceiver );

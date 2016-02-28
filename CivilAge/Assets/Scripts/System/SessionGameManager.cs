@@ -107,6 +107,7 @@ public class SessionGameManager : MonoBehaviour
     public static event GamePauseEvent OnPauseToggled;
 
     //Colors
+    public static float GlobalHighlightWidth = 0.1f;
     public static Color HoveredActorHightlightColor     = new Color( 0.8f, 0.56f, 0.2f ),
                         SelectedActorHightlightColor    = new Color( 0, 1.0f, 0 );
 

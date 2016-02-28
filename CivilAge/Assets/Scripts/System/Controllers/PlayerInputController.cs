@@ -82,7 +82,7 @@ public class PlayerInputController : MonoBehaviour
         //Highlight actor
         if ( HoveredActorHit.transform && !HoveredActorHit.transform.GetComponent<WorldActor>().IsSelected )
         {
-            HoveredActorHit.transform.GetComponent<MeshRenderer>( ).material.SetFloat( "_OutlineWidth", 0.2f );
+            HoveredActorHit.transform.GetComponent<MeshRenderer>( ).material.SetFloat( "_OutlineWidth", SessionGameManager.GlobalHighlightWidth );
             HoveredActorHit.transform.GetComponent<MeshRenderer>( ).material.SetColor( "_HighlightColor", SessionGameManager.HoveredActorHightlightColor );
         }
 
