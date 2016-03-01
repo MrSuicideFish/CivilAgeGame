@@ -8,9 +8,10 @@ using System.Collections;
 public struct ContextMenutTargetGroup
 {
     public string Name;
-    public ContextMenuCommand GlobalCommand;
-
+    public ContextMenuCommand[] GlobalCommands;
+    public List<WorldActor> TargetActors;
 }
+
 public struct ContextMenuTarget
 {
     public string Name;
@@ -74,7 +75,7 @@ public sealed class UIContextMenu : MonoBehaviour, IPointerEnterHandler, IPointe
 
     private int SelectedIdx = 0;
 
-    private float EdgePadding = 10.0f;
+    private float EdgePadding = 4.0f;
 
     public static UIContextMenu Current;
     public static bool IsHovering { get; private set; }
@@ -112,14 +113,20 @@ public sealed class UIContextMenu : MonoBehaviour, IPointerEnterHandler, IPointe
     private void InitMenu( )
     {
         //Calculate groups
-        List<List<ContextMenuTarget>> targetGroups = new List<List<ContextMenuTarget>>( );
+        List<ContextMenutTargetGroup> targetGroups = new List<ContextMenutTargetGroup>( );
 
         foreach(ContextMenuTarget target in Targets )
         {
             if(targetGroups.Count <= 0 )
             {
-                var newGroup = new List<ContextMenuTarget>( );
-                newGroup.Add( target );
+                var newGroup = new ContextMenutTargetGroup( );
+                newGroup.Name = target.Name;
+
+                //add commands from target
+                newGroup.GlobalCommands = target.Commands;
+
+                newGroup.TargetActors = new List<WorldActor>( );
+                newGroup.TargetActors.Add( target.TargetActor );
 
                 targetGroups.Add( newGroup );
             }
@@ -128,11 +135,11 @@ public sealed class UIContextMenu : MonoBehaviour, IPointerEnterHandler, IPointe
                 bool foundGroup = false;
                 for ( int i = 0; i < targetGroups.Count; i++ )
                 {
-                    if(targetGroups[i][0].TargetActor.GetType() == target.TargetActor.GetType( ) )
+                    if(targetGroups[i].TargetActors[0].GetType() == target.TargetActor.GetType( ) )
                     {
-                        if ( !targetGroups[i].Contains( target ) )
+                        if ( !targetGroups[i].TargetActors.Contains( target.TargetActor ) )
                         {
-                            targetGroups[i].Add( target );
+                            targetGroups[i].TargetActors.Add( target.TargetActor );
                         }
 
                         foundGroup = true;
@@ -141,8 +148,14 @@ public sealed class UIContextMenu : MonoBehaviour, IPointerEnterHandler, IPointe
 
                 if ( !foundGroup )
                 {
-                    var newGroup = new List<ContextMenuTarget>( );
-                    newGroup.Add( target );
+                    var newGroup = new ContextMenutTargetGroup( );
+                    newGroup.Name = target.Name;
+
+                    //add commands from target
+                    newGroup.GlobalCommands = target.Commands;
+
+                    newGroup.TargetActors = new List<WorldActor>( );
+                    newGroup.TargetActors.Add( target.TargetActor );
 
                     targetGroups.Add( newGroup );
                 }
@@ -160,16 +173,22 @@ public sealed class UIContextMenu : MonoBehaviour, IPointerEnterHandler, IPointe
 
         if ( targetGroups.Count == 1 )
         {
-            //Add menu item for each valid target[]
-            for ( int i = 0; i < targetGroups.Count; i++ )
+            ContextMenuItems = new ContextMenuItem[targetGroups[0].GlobalCommands.Length];
+
+            //Add commands from group
+            for (int i = 0; i < targetGroups[0].GlobalCommands.Length; i++ )
             {
                 ContextMenuItem newTargetBtn = GameObjectManager.GetObject( "EmptyText" ).AddComponent<ContextMenuItem>( );
+                newTargetBtn.ItemType = ContextMenuItem.ContextMenuItemType.COMMAND;
                 newTargetBtn.transform.SetParent( Rect, false );
+
                 newTargetBtn.GetComponent<RectTransform>( ).anchoredPosition = new Vector2( 0, -( ( i * 50 ) + EdgePadding ) );
-                newTargetBtn.GetComponent<Text>( ).text = targetGroups[i][0].TargetActor.GetType( ).ToString( );
-                newTargetBtn.GetComponent<Text>( ).fontSize = 32;
+
+                newTargetBtn.GetComponent<Text>( ).text = targetGroups[0].GlobalCommands[i].Name;
+                newTargetBtn.GetComponent<Text>( ).fontSize = 16;
 
                 newTargetBtn.gameObject.SetActive( true );
+
                 ContextMenuItems[i] = newTargetBtn;
             }
         }
@@ -179,22 +198,43 @@ public sealed class UIContextMenu : MonoBehaviour, IPointerEnterHandler, IPointe
             for ( int i = 0; i < targetGroups.Count; i++ )
             {
                 ContextMenuItem newTargetBtn = GameObjectManager.GetObject( "EmptyText" ).AddComponent<ContextMenuItem>( );
+                newTargetBtn.ItemType = ContextMenuItem.ContextMenuItemType.TARGET;
                 newTargetBtn.transform.SetParent( Rect, false );
                 newTargetBtn.GetComponent<RectTransform>( ).anchoredPosition = new Vector2( 0, -( ( i * 50 ) + EdgePadding ) );
-                newTargetBtn.GetComponent<Text>( ).text = targetGroups[i][0].TargetActor.GetType( ).ToString( );
-                newTargetBtn.GetComponent<Text>( ).fontSize = 32;
-
+                newTargetBtn.GetComponent<Text>( ).text = targetGroups[i].Name;
+                newTargetBtn.GetComponent<Text>( ).fontSize = 16;
                 newTargetBtn.gameObject.SetActive( true );
+
+                //add continue arrow
+                var arrow = GameObjectManager.GetObject( "EmptyImage" ).GetComponent<RectTransform>( );
+                arrow.SetParent( newTargetBtn.GetComponent<RectTransform>( ), false );
+                arrow.gameObject.SetActive( true );
+                arrow.GetComponent<Image>( ).color = Color.magenta;
+
+                //Reposition arrow
+                arrow.anchorMin = new Vector2( 1, 0.5f );
+                arrow.anchorMax = new Vector2( 1, 0.5f );
+                arrow.pivot = new Vector2( 1, 0.5f );
+                arrow.anchoredPosition = Vector2.zero;
+                arrow.SetSizeWithCurrentAnchors( RectTransform.Axis.Horizontal, 30 );
+                arrow.SetSizeWithCurrentAnchors( RectTransform.Axis.Vertical, 30 );
+
                 ContextMenuItems[i] = newTargetBtn;
             }
         }
     }
 
-    private void AddChild( ) { }
+    private void AddChild( ContextMenuItem[] items )
+    {
+    }
+
     private void RemoveChild( ) { }
     private void SelectTarget( ) { }
     private void SelectCommand( ) { }
 
+    private float HoverTime = 0.0f;
+    private ContextMenuItem CurrentHoverItem,
+                            LastHoverItem;
     void Update( )
     {
         if(Input.GetMouseButtonDown(0) || Input.GetMouseButtonDown( 1 ) )
@@ -205,6 +245,7 @@ public sealed class UIContextMenu : MonoBehaviour, IPointerEnterHandler, IPointe
             }
         }
 
+        LastHoverItem = null;
         if ( IsHovering )
         {
             SelectionRect.gameObject.SetActive( false );
@@ -215,13 +256,32 @@ public sealed class UIContextMenu : MonoBehaviour, IPointerEnterHandler, IPointe
                 {
                     SelectionRect.gameObject.SetActive( true );
                     SelectionRect.SetParent( ContextMenuItems[i].transform, false );
+
+                    LastHoverItem = CurrentHoverItem;
+                    CurrentHoverItem = ContextMenuItems[i];
+
+                    if(CurrentHoverItem == LastHoverItem )
+                    {
+                        HoverTime += Time.fixedDeltaTime;
+                    }
+                    else
+                    {
+                        HoverTime = 0;
+                    }
                 }
             }
         }
         else
         {
             SelectionRect.gameObject.SetActive( false );
+            HoverTime = 0;
         }
+
+        //Open next context
+        //if( CurrentHoverItem.ItemType == ContextMenuItem.ContextMenuItemType.TARGET && HoverTime > 2 )
+        //{
+
+        //}
     }
 
     public void OnPointerEnter( PointerEventData eventData )

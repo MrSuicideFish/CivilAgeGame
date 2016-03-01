@@ -113,7 +113,7 @@ public class PlayerInputController : MonoBehaviour
                 {
                     SelectedActors = new WorldActor[]
                     {
-                    HoveredActorHit.transform.GetComponent<WorldActor>()
+                        HoveredActorHit.transform.GetComponent<WorldActor>()
                     };
 
                     SelectedActors[0].Select( );
@@ -160,8 +160,8 @@ public class PlayerInputController : MonoBehaviour
                     {
                         //create new target
                         ContextMenuTarget newTarget = new ContextMenuTarget( );
-                        newTarget.Name = "NewTarget";
-                        newTarget.Commands = SelectedActors[i].GetComponent<WorldActor>( ).ContextCommands;
+                        newTarget.Name = SelectedActors[i].ToString( );
+                        newTarget.Commands = SelectedActors[i].GetComponent<WorldActor>( ).GetContextCommands( SelectedActors, HoveredActorHit.transform ? HoveredActorHit.transform.GetComponent<WorldActor>( ) : null );
                         newTarget.TargetActor = SelectedActors[i];
 
                         //add target to list

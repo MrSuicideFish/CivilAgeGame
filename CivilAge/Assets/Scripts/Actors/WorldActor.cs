@@ -45,7 +45,10 @@ public class WorldActor : MonoBehaviour, ISelectable
 
     public virtual ContextMenuCommand[] GetContextCommands( WorldActor[] selectedActor, WorldActor targetActor )
     {
-        if ( Array.Equals( ContextCommands, null ) ) ContextCommands = new ContextMenuCommand[0];
+        if ( Array.Equals( ContextCommands, null ) )
+        {
+            ContextCommands = new ContextMenuCommand[0];
+        }
 
         return ContextCommands;
     }

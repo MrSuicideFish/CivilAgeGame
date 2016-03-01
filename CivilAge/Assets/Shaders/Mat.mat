@@ -130,7 +130,7 @@ Material:
       data:
         first:
           name: _Gloss
-        second: 0.8
+        second: 0.381
       data:
         first:
           name: _OutlineWidth
@@ -143,8 +143,8 @@ Material:
       data:
         first:
           name: _Color
-        second: {r: 0.74264705, g: 0.74264705, b: 0.74264705, a: 1}
+        second: {r: 1, g: 1, b: 1, a: 1}
       data:
         first:
           name: _HighlightColor
-        second: {r: 0, g: 1, b: 0, a: 1}
+        second: {r: 0.63235295, g: 0.24858011, b: 0, a: 1}

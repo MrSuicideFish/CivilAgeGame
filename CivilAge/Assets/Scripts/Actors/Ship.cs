@@ -92,6 +92,9 @@ public class Ship : WorldActor
 
     public override ContextMenuCommand[] GetContextCommands( WorldActor[] selectedActor, WorldActor targetActor )
     {
-        return base.GetContextCommands( selectedActor, targetActor );
+        ContextCommands = new ContextMenuCommand[1];
+        ContextCommands[0] = new ContextMenuCommand( "Move To..", new GoTo( GoToPosition ) );
+
+        return ContextCommands;
     }
 }
