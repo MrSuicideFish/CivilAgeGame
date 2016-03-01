@@ -28,7 +28,7 @@ public class WorldActor : MonoBehaviour, ISelectable
 
         //Enable selection highlight
         GetComponent<MeshRenderer>( ).material.SetFloat( "_OutlineWidth", SessionGameManager.GlobalHighlightWidth );
-        GetComponent<MeshRenderer>( ).material.SetColor( "_HighlightColor", SessionGameManager.SelectedActorHightlightColor );
+        GetComponent<MeshRenderer>( ).material.SetColor( "_HighlightColor", CivColor.SelectedHighlightColor.ToColor( ) );
 
         SendMessage( "OnSelect", SendMessageOptions.DontRequireReceiver );
     }
@@ -43,7 +43,7 @@ public class WorldActor : MonoBehaviour, ISelectable
         SendMessage( "OnDeselect", SendMessageOptions.DontRequireReceiver );
     }
 
-    public virtual ContextMenuCommand[] GetContextCommands( WorldActor[] selectedActor, WorldActor targetActor )
+    public virtual ContextMenuCommand[] GetContextCommands( ContextData data )
     {
         if ( Array.Equals( ContextCommands, null ) )
         {

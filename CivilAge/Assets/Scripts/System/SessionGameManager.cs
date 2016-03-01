@@ -9,6 +9,32 @@ public enum VirtualTimeScale
     X3 = 3
 }
 
+public sealed class CivColor
+{
+    public float    R, 
+                    G, 
+                    B, 
+                    A;
+
+    public CivColor( ) { }
+    public CivColor( float r, float g, float b )
+    {
+        R = r;
+        G = g;
+        B = b;
+        A = 1;
+    }
+    public CivColor( float r, float g, float b, float a ) { }
+
+    public static CivColor HoverHighlightColor { get { return new CivColor( 0.8f, 0.56f, 0.2f ); } }
+    public static CivColor SelectedHighlightColor { get { return new CivColor( 0f, 1f, 0f ); } }
+
+    public Color ToColor( )
+    {
+        return new Color( R, G, B, A );
+    }
+}
+
 public class SessionGameManager : MonoBehaviour
 {
     //Singleton
@@ -108,8 +134,6 @@ public class SessionGameManager : MonoBehaviour
 
     //Colors
     public static float GlobalHighlightWidth = 0.1f;
-    public static Color HoveredActorHightlightColor     = new Color( 0.8f, 0.56f, 0.2f ),
-                        SelectedActorHightlightColor    = new Color( 0, 1.0f, 0 );
 
     /// <summary>
     /// On the start of the game session

@@ -1,4 +1,5 @@
 ﻿using UnityEngine;
+using System.Collections.Generic;
 using System.Collections;
 
 public class Ship : WorldActor
@@ -25,7 +26,7 @@ public class Ship : WorldActor
     private GameObject HealthBar;
 
     //--Actor Commands
-    delegate void GoTo( );
+    protected delegate void Command( ContextData contextInfo );
 
     //Instance initiation
     public virtual void Awake( )
@@ -42,15 +43,11 @@ public class Ship : WorldActor
 
     public virtual void Start( )
     {
-        //Init health bar
+        //Create health bar
         HealthBar = GameObjectManager.GetObject( "ShipHealthbar" );
         HealthBar.transform.SetParent( SessionGameManager.SessionCanvas.transform, false );
         HealthBar.transform.SetSiblingIndex( 0 );
     }
-
-    //Locomotion Methods
-    void GoToPosition( ) { }
-    void FollowShip( ) { }
 
     //Logistics
     public void Rename( string newName )
@@ -81,7 +78,6 @@ public class Ship : WorldActor
             var newPos = Camera.main.WorldToViewportPoint( transform.position );
 
             //Move to center
-            //newPos.x -= healthBarRect.rect.width / 2;
             newPos.x -= 0.035f;
             newPos.y += 0.075f;
 
@@ -90,11 +86,43 @@ public class Ship : WorldActor
         }
     }
 
-    public override ContextMenuCommand[] GetContextCommands( WorldActor[] selectedActor, WorldActor targetActor )
+    public override ContextMenuCommand[] GetContextCommands( ContextData data )
     {
-        ContextCommands = new ContextMenuCommand[1];
-        ContextCommands[0] = new ContextMenuCommand( "Move To..", new GoTo( GoToPosition ) );
+        List<ContextMenuCommand> commandsList = new List<ContextMenuCommand>( );
+
+        commandsList.Add( new ContextMenuCommand( "Move To..", new Command( MoveTo ) ) );
+        commandsList.Add( new ContextMenuCommand( "Set Patrol Route", new Command( SetPatrolRoute ) ) );
+
+        if ( data.TargetObject && data.TargetObject != this )
+        {
+            commandsList.Add( new ContextMenuCommand( "Follow Ship", new Command( FollowShip ) ) );
+        }
+
+        ContextCommands = commandsList.ToArray( );
 
         return ContextCommands;
+    }
+
+    ///-------------------------------
+    /// COMMANDS
+    ///-------------------------------
+    void MoveTo( ContextData data )
+    {
+        print( "Command MoveTo " + data.TargetPosition );
+    }
+
+    void FollowShip( ContextData data )
+    {
+        if ( data.TargetObject )
+        {
+            print( "Command FollowShip " + data.TargetObject );
+        }
+        else
+            print( "Command FollowShip " );
+    }
+
+    void SetPatrolRoute( ContextData data )
+    {
+        print( "Command SetPatrolRoute " + data.TargetPosition );
     }
 }

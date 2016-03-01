@@ -1,15 +1,46 @@
-﻿using UnityEngine;
+﻿/// <summary>
+/// UI CONTEXT MENU
+/// ---------------------------------------------
+/// The UIContextMenu class handles the single-instanced right-click context menu.
+/// The primary purpose of the menu is to handle the intiation and display of the window
+/// as well as the initiaion of it's child objects.
+/// 
+/// DO NOT USE CONTEXT MENU TO:
+/// 
+/// 1. Add WorldActor Logic.
+/// 2. Override Input Logic.
+/// 3. Override UI Logic.
+/// </summary>
+
+//.NET Namespaces
+using System;
+using System.Linq;
+using System.Collections;
+using System.Collections.Generic;
+
+//Unity3D Namespaces
+using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.EventSystems;
-using System;
-using System.Collections.Generic;
-using System.Collections;
 
-public struct ContextMenutTargetGroup
+/// <summary>
+/// ContextData contains all of the information about the event that led up
+/// to the display of the ContextWindow. Such as the object that was right-clicked,
+/// the position of the mouse, and the selected objects in question.
+/// </summary>
+public struct ContextData
+{
+    public WorldActor[] SelectedObjects;
+    public WorldActor TargetObject;
+    public Vector3 TargetPosition;
+}
+
+public struct ContextMenuTargetGroup
 {
     public string Name;
     public ContextMenuCommand[] GlobalCommands;
     public List<WorldActor> TargetActors;
+    public List<ContextMenuTarget> Targets;
 }
 
 public struct ContextMenuTarget
@@ -64,8 +95,22 @@ public enum ContextTarget
 
 public sealed class UIContextMenu : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler
 {
+    public static UIContextMenu Current         { get; private set; }
+    public static ContextData   CurrentEvent    { get; private set; }
+    public static bool          IsHovering      { get; private set; }
+
+    private int SelectedIdx = 0;
+
+    private float   EdgePadding = 4.0f,
+                    HoverTimer = 0.0f;
+
     private ContextMenuTarget[] Targets;
     private ContextMenuItem[] ContextMenuItems;
+
+    private ContextMenuItem CurrentHoverItem,
+                            LastHoverItem;
+
+    private UIContextMenu ChildMenu;
 
     private RectTransform   Rect,
                             SelectionRect;
@@ -73,61 +118,29 @@ public sealed class UIContextMenu : MonoBehaviour, IPointerEnterHandler, IPointe
     private UIContextMenu   Parent,
                             Child;
 
-    private int SelectedIdx = 0;
-
-    private float EdgePadding = 4.0f;
-
-    public static UIContextMenu Current;
-    public static bool IsHovering { get; private set; }
-
-    public static void Display( ContextMenuTarget[] targets, out RectTransform contextMenuRect, ContextTarget targetType = ContextTarget.ACTOR )
-    {
-        //Close existing panels
-        if ( Current )
-        {
-            Close( );
-        }
-
-        //Create empty panel
-        var newPanel = GameObjectManager.GetObject( "EmptyPanel" );
-        newPanel.transform.SetParent( SessionGameManager.SessionCanvas.transform, false );
-        newPanel.SetActive( true );
-
-        var newMenu = newPanel.AddComponent<UIContextMenu>( );
-        newMenu.Targets = targets;
-
-        contextMenuRect = newPanel.GetComponent<RectTransform>( );
-
-        Current = newMenu;
-        Current.InitMenu( );
-    }
-
-    public static void Close( )
-    {
-        if(Current != null )
-        {
-            GameObject.Destroy( Current.gameObject );
-        }
-    }
-
+    //Initialization
     private void InitMenu( )
     {
         //Calculate groups
-        List<ContextMenutTargetGroup> targetGroups = new List<ContextMenutTargetGroup>( );
+        List<ContextMenuTargetGroup> targetGroups = new List<ContextMenuTargetGroup>( );
 
-        foreach(ContextMenuTarget target in Targets )
+        foreach ( ContextMenuTarget target in Targets )
         {
-            if(targetGroups.Count <= 0 )
+            if ( targetGroups.Count <= 0 )
             {
-                var newGroup = new ContextMenutTargetGroup( );
+                var newGroup = new ContextMenuTargetGroup( );
                 newGroup.Name = target.Name;
 
                 //add commands from target
                 newGroup.GlobalCommands = target.Commands;
 
+                //create group->target actors list
                 newGroup.TargetActors = new List<WorldActor>( );
                 newGroup.TargetActors.Add( target.TargetActor );
 
+                newGroup.Targets = Targets.ToList( );
+
+                //add new group to list
                 targetGroups.Add( newGroup );
             }
             else
@@ -135,11 +148,12 @@ public sealed class UIContextMenu : MonoBehaviour, IPointerEnterHandler, IPointe
                 bool foundGroup = false;
                 for ( int i = 0; i < targetGroups.Count; i++ )
                 {
-                    if(targetGroups[i].TargetActors[0].GetType() == target.TargetActor.GetType( ) )
+                    if ( targetGroups[i].TargetActors[0].GetType( ) == target.TargetActor.GetType( ) )
                     {
                         if ( !targetGroups[i].TargetActors.Contains( target.TargetActor ) )
                         {
                             targetGroups[i].TargetActors.Add( target.TargetActor );
+                            targetGroups[i].Targets.Add( target );
                         }
 
                         foundGroup = true;
@@ -148,7 +162,7 @@ public sealed class UIContextMenu : MonoBehaviour, IPointerEnterHandler, IPointe
 
                 if ( !foundGroup )
                 {
-                    var newGroup = new ContextMenutTargetGroup( );
+                    var newGroup = new ContextMenuTargetGroup( );
                     newGroup.Name = target.Name;
 
                     //add commands from target
@@ -156,6 +170,9 @@ public sealed class UIContextMenu : MonoBehaviour, IPointerEnterHandler, IPointe
 
                     newGroup.TargetActors = new List<WorldActor>( );
                     newGroup.TargetActors.Add( target.TargetActor );
+
+                    newGroup.Targets = new List<ContextMenuTarget>( );
+                    newGroup.Targets.Add( target );
 
                     targetGroups.Add( newGroup );
                 }
@@ -166,7 +183,11 @@ public sealed class UIContextMenu : MonoBehaviour, IPointerEnterHandler, IPointe
 
         Rect = GetComponent<RectTransform>( );
         Rect.SetSizeWithCurrentAnchors( RectTransform.Axis.Horizontal, 250 + ( EdgePadding * 2 ) );
-        Rect.SetSizeWithCurrentAnchors( RectTransform.Axis.Vertical, ( targetGroups.Count * 50 ) + ( EdgePadding * 2 ) );
+
+        if ( targetGroups.Count != 1 )
+            Rect.SetSizeWithCurrentAnchors( RectTransform.Axis.Vertical, ( targetGroups.Count * 50 ) + ( EdgePadding * 2 ) );
+        else
+            Rect.SetSizeWithCurrentAnchors( RectTransform.Axis.Vertical, ( targetGroups[0].GlobalCommands.Length * 50 ) + ( EdgePadding * 2 ) );
 
         SelectionRect = GameObjectManager.GetObject( "EmptyImage" ).GetComponent<RectTransform>( );
         SelectionRect.transform.SetParent( Rect, false );
@@ -176,17 +197,23 @@ public sealed class UIContextMenu : MonoBehaviour, IPointerEnterHandler, IPointe
             ContextMenuItems = new ContextMenuItem[targetGroups[0].GlobalCommands.Length];
 
             //Add commands from group
-            for (int i = 0; i < targetGroups[0].GlobalCommands.Length; i++ )
+            for ( int i = 0; i < targetGroups[0].GlobalCommands.Length; i++ )
             {
+                //Create and initialize button data
                 ContextMenuItem newTargetBtn = GameObjectManager.GetObject( "EmptyText" ).AddComponent<ContextMenuItem>( );
                 newTargetBtn.ItemType = ContextMenuItem.ContextMenuItemType.COMMAND;
+                newTargetBtn.TargetCommand = targetGroups[0].GlobalCommands[i].Command;
+
                 newTargetBtn.transform.SetParent( Rect, false );
 
+                //Position button
                 newTargetBtn.GetComponent<RectTransform>( ).anchoredPosition = new Vector2( 0, -( ( i * 50 ) + EdgePadding ) );
 
+                //Set button text
                 newTargetBtn.GetComponent<Text>( ).text = targetGroups[0].GlobalCommands[i].Name;
                 newTargetBtn.GetComponent<Text>( ).fontSize = 16;
 
+                //Show
                 newTargetBtn.gameObject.SetActive( true );
 
                 ContextMenuItems[i] = newTargetBtn;
@@ -199,6 +226,8 @@ public sealed class UIContextMenu : MonoBehaviour, IPointerEnterHandler, IPointe
             {
                 ContextMenuItem newTargetBtn = GameObjectManager.GetObject( "EmptyText" ).AddComponent<ContextMenuItem>( );
                 newTargetBtn.ItemType = ContextMenuItem.ContextMenuItemType.TARGET;
+                newTargetBtn.Targets = targetGroups[i].Targets.ToArray( );
+
                 newTargetBtn.transform.SetParent( Rect, false );
                 newTargetBtn.GetComponent<RectTransform>( ).anchoredPosition = new Vector2( 0, -( ( i * 50 ) + EdgePadding ) );
                 newTargetBtn.GetComponent<Text>( ).text = targetGroups[i].Name;
@@ -222,28 +251,95 @@ public sealed class UIContextMenu : MonoBehaviour, IPointerEnterHandler, IPointe
                 ContextMenuItems[i] = newTargetBtn;
             }
         }
+
+
     }
 
-    private void AddChild( ContextMenuItem[] items )
+    //Visibility
+    public static void Display( ContextMenuTarget[] targets, out RectTransform contextMenuRect )
     {
+        //Close existing panels
+        if ( Current )
+        {
+            Close( );
+        }
+
+        //Create empty panel
+        var newPanel = GameObjectManager.GetObject( "EmptyPanel" ).AddComponent<UIContextMenu>( );
+        newPanel.GetComponent<RectTransform>( ).SetParent( SessionGameManager.SessionCanvas.transform, false );
+        newPanel.gameObject.SetActive( true );
+        newPanel.Targets = targets;
+
+        contextMenuRect = newPanel.GetComponent<RectTransform>( );
+
+        //Create Context Data
+        var newEv = new ContextData( );
+        newEv.SelectedObjects = PlayerInputController.SelectedActors;
+        newEv.TargetPosition = PlayerInputController.MouseWorldPos;
+
+        if ( PlayerInputController.HoveredActor.transform )
+        {
+            newEv.TargetObject = PlayerInputController.HoveredActor.transform.GetComponent<WorldActor>( );
+        }
+
+        CurrentEvent    = newEv;
+        Current         = newPanel;
+
+        Current.InitMenu( );
     }
 
-    private void RemoveChild( ) { }
-    private void SelectTarget( ) { }
-    private void SelectCommand( ) { }
+    public static void Close( )
+    {
+        if ( Current != null )
+        {
+            IsHovering = false;
+            GameObject.Destroy( Current.gameObject );
+        }
+    }
 
-    private float HoverTime = 0.0f;
-    private ContextMenuItem CurrentHoverItem,
-                            LastHoverItem;
+    //Window Collapse/Minimize
+    private void DisplayChild( ContextMenuTarget[] targets, Vector2 windowPos )
+    {
+        //Create empty panel
+        var childMenu = ChildMenu ? ChildMenu : GameObjectManager.GetObject( "EmptyPanel" ).AddComponent<UIContextMenu>( );
+        childMenu.gameObject.SetActive( true );
+        childMenu.Targets = targets;
+
+        RectTransform childMenuRect = childMenu.GetComponent<RectTransform>( );
+        childMenuRect.anchoredPosition = windowPos;
+        childMenuRect.SetParent( Current.transform, false );
+
+        //Create Context Data
+        //var newEv = new ContextData( );
+        //newEv.SelectedObjects   = CurrentEvent.SelectedObjects;
+        //newEv.TargetPosition    = CurrentEvent.TargetPosition;
+        //newEv.TargetObject      = CurrentEvent.TargetObject;
+
+        ChildMenu = childMenu;
+        ChildMenu.InitMenu( );
+    }
+
+    //Click Events
+    public void OnPointerEnter( PointerEventData eventData )
+    {
+        IsHovering = true;
+    }
+    public void OnPointerExit( PointerEventData eventData )
+    {
+        IsHovering = false;
+    }
+
+    //Tick
     void Update( )
     {
-        if(Input.GetMouseButtonDown(0) || Input.GetMouseButtonDown( 1 ) )
+        if( (Input.GetMouseButton( 0 ) || 
+            Input.GetMouseButton( 1 )) &&
+            !IsHovering )
         {
-            if ( !IsHovering )
-            {
-                Close( );
-            }
+            Close( );
         }
+
+        var ChildIsValid = false;
 
         LastHoverItem = null;
         if ( IsHovering )
@@ -251,46 +347,55 @@ public sealed class UIContextMenu : MonoBehaviour, IPointerEnterHandler, IPointe
             SelectionRect.gameObject.SetActive( false );
             for ( int i = 0; i < ContextMenuItems.Length; i++ )
             {
-                ContextMenuItems[i].GetComponent<Text>( ).color = ContextMenuItems[i].IsHovering ? SessionGameManager.HoveredActorHightlightColor : Color.white;
+                ContextMenuItems[i].GetComponent<Text>( ).color = ContextMenuItems[i].IsHovering ? CivColor.HoverHighlightColor.ToColor( ) : Color.white;
                 if ( ContextMenuItems[i].IsHovering )
                 {
                     SelectionRect.gameObject.SetActive( true );
                     SelectionRect.SetParent( ContextMenuItems[i].transform, false );
 
-                    LastHoverItem = CurrentHoverItem;
-                    CurrentHoverItem = ContextMenuItems[i];
+                    if ( ContextMenuItems[i].ItemType == ContextMenuItem.ContextMenuItemType.TARGET )
+                    {
+                        LastHoverItem = CurrentHoverItem;
+                        CurrentHoverItem = ContextMenuItems[i];
 
-                    if(CurrentHoverItem == LastHoverItem )
-                    {
-                        HoverTime += Time.fixedDeltaTime;
-                    }
-                    else
-                    {
-                        HoverTime = 0;
+                        if ( CurrentHoverItem == LastHoverItem )
+                        {
+                            HoverTimer += Time.fixedDeltaTime;
+                            ChildIsValid = true;
+                        }
+                        else
+                        {
+                            HoverTimer = 0;
+                        }
                     }
                 }
+            }
+
+            if ( !ChildIsValid )
+            {
+                if ( ChildMenu )
+                {
+                    GameObject.Destroy( ChildMenu );
+                }
+            }
+
+            //Open next context
+            if ( HoverTimer >= 2 && ChildMenu == null )
+            {
+                print( "Opening next window" );
+                DisplayChild( CurrentHoverItem.Targets, CurrentHoverItem.transform.position );
             }
         }
         else
         {
             SelectionRect.gameObject.SetActive( false );
-            HoverTime = 0;
+
+            if ( ChildMenu )
+            {
+                GameObject.Destroy( ChildMenu );
+            }
+
+            HoverTimer = 0;
         }
-
-        //Open next context
-        //if( CurrentHoverItem.ItemType == ContextMenuItem.ContextMenuItemType.TARGET && HoverTime > 2 )
-        //{
-
-        //}
-    }
-
-    public void OnPointerEnter( PointerEventData eventData )
-    {
-        IsHovering = true;
-    }
-
-    public void OnPointerExit( PointerEventData eventData )
-    {
-        IsHovering = false;
     }
 }

@@ -6,6 +6,15 @@ using System.Collections.Generic;
 
 public class PlayerInputController : MonoBehaviour
 {
+    //--Debug----------------
+    Texture2D BoxTex;
+    GameObject DebugSphereA,
+                DebugSphereB,
+                DebugSphereC,
+                DebugSphereD,
+                DebugSphereE;
+    //------------------------
+
     private enum MouseDragMode
     {
         NONE                = -1,
@@ -13,27 +22,27 @@ public class PlayerInputController : MonoBehaviour
         DRAG_CAMERA_ROTATE  = 1,
     }
 
+    public static Vector3 MouseWorldPos { get; private set; }
+    public static Ray MouseHoverRay { get; private set; }
+    public static WorldActor[] SelectedActors { get; private set; }
+    public static RaycastHit HoveredActor;
+
+    public float MouseTraceDist = 2.0f;
+
     private Rect ScreenSelectionRect;
 
     private MouseDragMode DragMode = MouseDragMode.NONE;
 
     private float DragTimer = 0.0f;
+
     private bool IsDragging = false;
+
     private Vector2 MouseScreenPos,
                     DragStartPosition,
                     DragPosition,
                     DragEndPosition;
 
-    private Vector3 MouseWorldPos;
-
-    private Ray MouseHoverRay;
-
-    private RaycastHit HoveredActorHit;
-    public WorldActor[] SelectedActors;
-
     private RectTransform ActionContextMenu;
-
-    public float MouseTraceDist = 2.0f;
 
     ///////////////////////
     // Initiation
@@ -41,6 +50,7 @@ public class PlayerInputController : MonoBehaviour
     void Awake( )
     {
         SessionGameManager.OnPauseToggled += OnGamePaused;
+        SelectedActors = new WorldActor[0];
     }
 
     ///////////////////////
@@ -49,10 +59,10 @@ public class PlayerInputController : MonoBehaviour
     void OnGamePaused( bool enabled )
     {
         //Un-highlight hovered actor
-        if ( HoveredActorHit.transform )
+        if ( HoveredActor.transform )
         {
-            HoveredActorHit.transform.GetComponent<MeshRenderer>( ).material.SetFloat( "_OutlineWidth", 0.0f );
-            HoveredActorHit = new RaycastHit( ); //to set to null
+            HoveredActor.transform.GetComponent<MeshRenderer>( ).material.SetFloat( "_OutlineWidth", 0.0f );
+            HoveredActor = new RaycastHit( ); //to set to null
         }
     }
 
@@ -75,45 +85,38 @@ public class PlayerInputController : MonoBehaviour
             );
 
         //Cast
-        var oldHoverActorHit = HoveredActorHit;
-        Physics.Raycast( MouseHoverRay, out HoveredActorHit, Mathf.Infinity, 1 << 8 );
+        var oldHoverActorHit = HoveredActor;
+        Physics.Raycast( MouseHoverRay, out HoveredActor, Mathf.Infinity, 1 << 8 );
 
         //Unhighlight old
-        if ( !oldHoverActorHit.Equals( HoveredActorHit ) && oldHoverActorHit.transform && !oldHoverActorHit.transform.GetComponent<WorldActor>( ).IsSelected )
+        if ( !oldHoverActorHit.Equals( HoveredActor ) && oldHoverActorHit.transform && !oldHoverActorHit.transform.GetComponent<WorldActor>( ).IsSelected )
         {
             oldHoverActorHit.transform.GetComponent<MeshRenderer>( ).material.SetFloat( "_OutlineWidth", 0.0f );
         }
 
         //Highlight actor
-        if ( HoveredActorHit.transform && !HoveredActorHit.transform.GetComponent<WorldActor>().IsSelected )
+        if ( HoveredActor.transform && !HoveredActor.transform.GetComponent<WorldActor>().IsSelected )
         {
-            HoveredActorHit.transform.GetComponent<MeshRenderer>( ).material.SetFloat( "_OutlineWidth", SessionGameManager.GlobalHighlightWidth );
-            HoveredActorHit.transform.GetComponent<MeshRenderer>( ).material.SetColor( "_HighlightColor", SessionGameManager.HoveredActorHightlightColor );
+            HoveredActor.transform.GetComponent<MeshRenderer>( ).material.SetFloat( "_OutlineWidth", SessionGameManager.GlobalHighlightWidth );
+            HoveredActor.transform.GetComponent<MeshRenderer>( ).material.SetColor( "_HighlightColor", CivColor.HoverHighlightColor.ToColor( ) );
         }
 
         //////////////////////
         // Mouse Drag
         /////////////////////
-        // - Selection
+        
+        // - Begin Drag Select
         if ( Input.GetMouseButtonDown( ( int )MouseDragMode.DRAG_SELECT ) )
         {
             if ( !UIContextMenu.IsHovering )
             {
                 ToggleMouseDragMode( MouseDragMode.DRAG_SELECT );
-            }
-        }
 
-        if ( Input.GetMouseButtonUp( ( int )MouseDragMode.DRAG_SELECT ) )
-        {
-            if ( !UIContextMenu.IsHovering )
-            {
-                ToggleMouseDragMode( MouseDragMode.NONE );
-
-                if ( HoveredActorHit.transform )
+                if ( HoveredActor.transform )
                 {
                     SelectedActors = new WorldActor[]
                     {
-                        HoveredActorHit.transform.GetComponent<WorldActor>()
+                        HoveredActor.transform.GetComponent<WorldActor>()
                     };
 
                     SelectedActors[0].Select( );
@@ -121,12 +124,23 @@ public class PlayerInputController : MonoBehaviour
             }
         }
 
-        // - Camera Rotate
+        // - End Drag Select
+        if ( Input.GetMouseButtonUp( ( int )MouseDragMode.DRAG_SELECT ) )
+        {
+            if ( !UIContextMenu.IsHovering )
+            {
+
+                ToggleMouseDragMode( MouseDragMode.NONE );
+            }
+        }
+
+        // - Begin Camera Rotate
         if ( Input.GetMouseButtonDown( ( int )MouseDragMode.DRAG_CAMERA_ROTATE ) )
         {
             ToggleMouseDragMode( MouseDragMode.DRAG_CAMERA_ROTATE );
         }
 
+        // - End Camera Rotate
         if ( Input.GetMouseButtonUp( ( int )MouseDragMode.DRAG_CAMERA_ROTATE ) )
         {
             if ( IsDragging )
@@ -136,7 +150,7 @@ public class PlayerInputController : MonoBehaviour
             else
             {
                 //select hovered if nothing else
-                if ( HoveredActorHit.transform && !SelectedActors.Contains(HoveredActorHit.transform.GetComponent<WorldActor>()))
+                if ( HoveredActor.transform && SelectedActors.Length == 0 )
                 {
                     foreach(WorldActor actor in SelectedActors )
                     {
@@ -145,7 +159,7 @@ public class PlayerInputController : MonoBehaviour
 
                     SelectedActors = new WorldActor[]
                     {
-                        HoveredActorHit.transform.GetComponent<WorldActor>()
+                        HoveredActor.transform.GetComponent<WorldActor>()
                     };
 
                     SelectedActors[0].Select( );
@@ -156,13 +170,22 @@ public class PlayerInputController : MonoBehaviour
                 //create context content
                 if ( SelectedActors.Length > 0 )
                 {
-                    for(int i = 0; i < SelectedActors.Length; i++ )
+                    ContextData contextInfo = new ContextData( );
+                    contextInfo.SelectedObjects = SelectedActors;
+                    contextInfo.TargetPosition  = MouseWorldPos;
+
+                    if ( HoveredActor.transform )
+                    {
+                        contextInfo.TargetObject = HoveredActor.transform.GetComponent<WorldActor>( );
+                    }
+
+                    for ( int i = 0; i < SelectedActors.Length; i++ )
                     {
                         //create new target
                         ContextMenuTarget newTarget = new ContextMenuTarget( );
-                        newTarget.Name = SelectedActors[i].ToString( );
-                        newTarget.Commands = SelectedActors[i].GetComponent<WorldActor>( ).GetContextCommands( SelectedActors, HoveredActorHit.transform ? HoveredActorHit.transform.GetComponent<WorldActor>( ) : null );
-                        newTarget.TargetActor = SelectedActors[i];
+                        newTarget.Name          = SelectedActors[i].ToString( );
+                        newTarget.Commands      = SelectedActors[i].GetComponent<WorldActor>( ).GetContextCommands( contextInfo );
+                        newTarget.TargetActor   = SelectedActors[i];
 
                         //add target to list
                         targets.Add( newTarget );
@@ -311,14 +334,6 @@ public class PlayerInputController : MonoBehaviour
         DragMode = newMode;
     }
 
-    
-
-    Texture2D BoxTex;
-    GameObject DebugSphereA,
-                DebugSphereB,
-                DebugSphereC,
-                DebugSphereD,
-                DebugSphereE;
     void OnGUI( )
     {
         //Calculate selecton rect
@@ -333,12 +348,17 @@ public class PlayerInputController : MonoBehaviour
 
             //Draw selection rect
             GUI.skin = SessionGameManager.Instance.DefaultGUISkin;
-            GUI.color = new Color( 1, 1, 1, 0.05f );
+
+            Color rectColor = CivColor.HoverHighlightColor.ToColor( );
+            rectColor.a = 0.2f;
+
+            GUI.color = rectColor;
 
             if ( !BoxTex )
                 BoxTex = Texture2D.whiteTexture;
 
-            GUI.DrawTexture( ScreenSelectionRect, BoxTex, ScaleMode.StretchToFill );
+            //GUI.DrawTexture( ScreenSelectionRect, BoxTex, ScaleMode.StretchToFill );
+            GUI.Box( ScreenSelectionRect, "" );
         }
     }
 
