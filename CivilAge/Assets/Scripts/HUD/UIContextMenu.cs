@@ -97,12 +97,13 @@ public sealed class UIContextMenu : MonoBehaviour, IPointerEnterHandler, IPointe
 {
     public static UIContextMenu Current         { get; private set; }
     public static ContextData   CurrentEvent    { get; private set; }
-    public static bool          IsHovering      { get; private set; }
+    public bool IsHovering { get; private set; }
 
     private int SelectedIdx = 0;
 
     private float   EdgePadding = 4.0f,
-                    HoverTimer = 0.0f;
+                    HoverTimer = 0.0f,
+                    TargetHoverTime = 1.0f;
 
     private ContextMenuTarget[] Targets;
     private ContextMenuItem[] ContextMenuItems;
@@ -292,7 +293,7 @@ public sealed class UIContextMenu : MonoBehaviour, IPointerEnterHandler, IPointe
     {
         if ( Current != null )
         {
-            IsHovering = false;
+            Current.IsHovering = false;
             GameObject.Destroy( Current.gameObject );
         }
     }
@@ -300,20 +301,19 @@ public sealed class UIContextMenu : MonoBehaviour, IPointerEnterHandler, IPointe
     //Window Collapse/Minimize
     private void DisplayChild( ContextMenuTarget[] targets, Vector2 windowPos )
     {
+        if ( ChildMenu != null )
+        {
+            GameObject.Destroy( ChildMenu.gameObject );
+        }
+
         //Create empty panel
-        var childMenu = ChildMenu ? ChildMenu : GameObjectManager.GetObject( "EmptyPanel" ).AddComponent<UIContextMenu>( );
+        var childMenu = GameObjectManager.GetObject( "EmptyPanel" ).AddComponent<UIContextMenu>( );
         childMenu.gameObject.SetActive( true );
-        childMenu.Targets = targets;
+        childMenu.Targets = new ContextMenuTarget[] { targets[ 0 ] };
 
         RectTransform childMenuRect = childMenu.GetComponent<RectTransform>( );
         childMenuRect.anchoredPosition = windowPos;
         childMenuRect.SetParent( Current.transform, false );
-
-        //Create Context Data
-        //var newEv = new ContextData( );
-        //newEv.SelectedObjects   = CurrentEvent.SelectedObjects;
-        //newEv.TargetPosition    = CurrentEvent.TargetPosition;
-        //newEv.TargetObject      = CurrentEvent.TargetObject;
 
         ChildMenu = childMenu;
         ChildMenu.InitMenu( );
@@ -342,7 +342,7 @@ public sealed class UIContextMenu : MonoBehaviour, IPointerEnterHandler, IPointe
         var ChildIsValid = false;
 
         LastHoverItem = null;
-        if ( IsHovering )
+        if ( IsHovering || (ChildMenu != null && ChildMenu.IsHovering) )
         {
             SelectionRect.gameObject.SetActive( false );
             for ( int i = 0; i < ContextMenuItems.Length; i++ )
@@ -371,30 +371,15 @@ public sealed class UIContextMenu : MonoBehaviour, IPointerEnterHandler, IPointe
                 }
             }
 
-            if ( !ChildIsValid )
-            {
-                if ( ChildMenu )
-                {
-                    GameObject.Destroy( ChildMenu );
-                }
-            }
-
             //Open next context
-            if ( HoverTimer >= 2 && ChildMenu == null )
+            if ( ( CurrentHoverItem == LastHoverItem ) && HoverTimer >= TargetHoverTime )
             {
-                print( "Opening next window" );
-                DisplayChild( CurrentHoverItem.Targets, CurrentHoverItem.transform.position );
+                List<ContextMenuTarget> targets = new List<ContextMenuTarget>( );
+                DisplayChild( CurrentHoverItem.Targets, new Vector2( Rect.sizeDelta.x, CurrentHoverItem.GetComponent<RectTransform>( ).anchoredPosition.y ) );
             }
         }
         else
         {
-            SelectionRect.gameObject.SetActive( false );
-
-            if ( ChildMenu )
-            {
-                GameObject.Destroy( ChildMenu );
-            }
-
             HoverTimer = 0;
         }
     }
