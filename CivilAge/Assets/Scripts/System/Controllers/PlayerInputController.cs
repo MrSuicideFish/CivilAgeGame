@@ -108,7 +108,7 @@ public class PlayerInputController : MonoBehaviour
         // - Begin Drag Select
         if ( Input.GetMouseButtonDown( ( int )MouseDragMode.DRAG_SELECT ) )
         {
-            if ( !UIContextMenu.IsHovering )
+            if ( !UIContextMenu.Current || !UIContextMenu.Current.IsHovering )
             {
                 ToggleMouseDragMode( MouseDragMode.DRAG_SELECT );
 
@@ -127,7 +127,7 @@ public class PlayerInputController : MonoBehaviour
         // - End Drag Select
         if ( Input.GetMouseButtonUp( ( int )MouseDragMode.DRAG_SELECT ) )
         {
-            if ( !UIContextMenu.IsHovering )
+            if ( !UIContextMenu.Current || !UIContextMenu.Current.IsHovering )
             {
 
                 ToggleMouseDragMode( MouseDragMode.NONE );
