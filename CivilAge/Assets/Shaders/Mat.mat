@@ -134,7 +134,7 @@ Material:
       data:
         first:
           name: _OutlineWidth
-        second: 0
+        second: 0.13
     m_Colors:
       data:
         first:
@@ -147,4 +147,4 @@ Material:
       data:
         first:
           name: _HighlightColor
-        second: {r: 0.63235295, g: 0.24858011, b: 0, a: 1}
+        second: {r: 0, g: 0.6689658, b: 1, a: 1}
